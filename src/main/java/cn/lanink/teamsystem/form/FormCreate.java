@@ -42,6 +42,11 @@ public class FormCreate {
         player.showFormWindow(simple);
     }
 
+    /**
+     * 创建队伍页面
+     *
+     * @param player 打开GUI的玩家
+     */
     public static void showCreateTeam(@NotNull Player player) {
         AdvancedFormWindowCustom custom = new AdvancedFormWindowCustom("创建队伍");
         int id;
@@ -61,6 +66,7 @@ public class FormCreate {
             TeamSystem.getInstance().getTeams().put(finalId, team);
             showMyTeam(player);
         }));
+        custom.onClosed(FormCreate::showMain);
         player.showFormWindow(custom);
     }
 
@@ -70,6 +76,7 @@ public class FormCreate {
                 .onClicked(FormCreate::showFindTeam));
         simple.addButton(new ResponseElementButton("队伍列表")
                 .onClicked(FormCreate::showTeamList));
+        simple.onClosed(FormCreate::showMain);
         player.showFormWindow(simple);
     }
 
@@ -77,6 +84,12 @@ public class FormCreate {
         showTeamInfo(TeamSystem.getInstance().getTeamByPlayer(player), player);
     }
 
+    /**
+     * 显示队伍信息
+     *
+     * @param team 队伍
+     * @param player 打开GUI的玩家
+     */
     public static void showTeamInfo(@NotNull Team team, @NotNull Player player) {
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("队伍信息");
         StringBuilder content = new StringBuilder();
@@ -106,10 +119,7 @@ public class FormCreate {
                         .onClicked(p -> showTeamApplicationList(team, p)));
             }
             simple.addButton(new ResponseElementButton("传送功能")
-                    .onClicked((p) -> {
-                        showFindTeamPlayers(team,p);
-                        //TODO
-                    }));
+                    .onClicked((p) -> showFindTeamPlayers(team,p)));
         }else if (team.getPlayers().size() < team.getMaxPlayers()) {
             simple.addButton(new ResponseElementButton("申请加入")
                     .onClicked((p) -> {
@@ -130,7 +140,7 @@ public class FormCreate {
      * 队长转让
      *
      * @param team 队伍
-     * @param player 玩家
+     * @param player 打开GUI的玩家
      */
     public static void showTeamLeaderTransfer(@NotNull Team team, @NotNull Player player) {
         if (team.getTeamLeader() != player) {
@@ -210,21 +220,49 @@ public class FormCreate {
         player.showFormWindow(simple);
     }
 
+    /**
+     * 队伍传送
+     *
+     * @param team 队伍
+     * @param player 打开GUI的玩家
+     */
     public static void showFindTeamPlayers(Team team, @NotNull Player player) {
         if (team == null) {
             team = TeamSystem.getInstance().getTeamByPlayer(player);
         }
+        final Team finalTeam = team;
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("选择传送队员");
-        Team finalTeam = team;
-        simple.addButton(new ResponseElementButton("返回")
-                .onClicked(p -> showTeamInfo(finalTeam, p)));
-        for(Player player1:team.getPlayers()){
-            if(!player.equals(player1)){
-                simple.addButton(new ResponseElementButton(player1.getName()).onClicked(player2 -> {
-                    player.teleport(player1);
-                }));
+        for(Player player1 : team.getPlayers()){
+            if(player != player1){
+                simple.addButton(new ResponseElementButton(player1.getName())
+                        .onClicked(player2 -> {
+                            player2.sendMessage("已发送传送申请，请等待对方确认！");
+                            AdvancedFormWindowModal modal = new AdvancedFormWindowModal(
+                                    "组队传送",
+                                    "队友 " + player2.getName() + " 想要传送到你这里，是否同意？",
+                                    "同意",
+                                    "拒绝");
+                            modal.onClickedTrue(player2::teleport);
+                            modal.onClickedFalse((cp2) -> {
+                                AdvancedFormWindowSimple tip = new AdvancedFormWindowSimple("组队传送");
+                                tip.setContent("玩家 " + cp2.getName() + " 拒绝了您的传送请求\n\n");
+                                tip.addButton(new ResponseElementButton("返回")
+                                        .onClicked((cp3) -> showFindTeamPlayers(finalTeam, cp3)));
+                                player2.showFormWindow(tip);
+                            });
+                            modal.onClosed((cp2) -> {
+                                AdvancedFormWindowSimple tip = new AdvancedFormWindowSimple("组队传送");
+                                tip.setContent("玩家 " + cp2.getName() + " 拒绝了您的传送请求\n\n");
+                                tip.addButton(new ResponseElementButton("返回")
+                                        .onClicked((cp3) -> showFindTeamPlayers(finalTeam, cp3)));
+                                player2.showFormWindow(tip);
+                            });
+                            player1.showFormWindow(modal);
+                        }));
             }
         }
+        simple.addButton(new ResponseElementButton("返回")
+                .onClicked(p -> showTeamInfo(finalTeam, p)));
         player.showFormWindow(simple);
     }
 
@@ -250,7 +288,7 @@ public class FormCreate {
     public static void showFindTeam(@NotNull Player player) {
         AdvancedFormWindowCustom custom = new AdvancedFormWindowCustom("查找队伍");
         custom.addElement(new ElementDropdown("根据什么参数查找?", Arrays.asList("队伍ID", "队伍名称", "队长/队员名称")));
-        custom.addElement(new ElementInput("参数", "id/teamName/player"));
+        custom.addElement(new ElementInput("参数", "队伍ID/队伍名称/队长或队员名称"));
         custom.onResponded((formResponseCustom, p) -> {
             String input = formResponseCustom.getInputResponse(1);
             if (input == null || input.trim().equals("")) {

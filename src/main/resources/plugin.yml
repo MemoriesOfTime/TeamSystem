@@ -3,7 +3,7 @@ main: cn.lanink.teamsystem.TeamSystem
 version: "1.0.0"
 api: ["1.0.11"]
 load: POSTWORLD
-author: "LT_Name"
+authors: ["LT_Name", "SmallasWater"]
 
 commands:
   team:
