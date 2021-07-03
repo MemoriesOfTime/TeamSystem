@@ -35,7 +35,7 @@ public class FormCreate {
             simple.addButton(new ResponseElementButton("我的队伍")
                     .onClicked(FormCreate::showMyTeam));
             simple.addButton(new ResponseElementButton("退出队伍")
-                    .onClicked((p) -> TeamSystem.getInstance().quitTeam(p)));
+                    .onClicked((p) -> showQuitTeamConfirm(null, p)));
         }
         player.showFormWindow(simple);
     }
@@ -117,16 +117,23 @@ public class FormCreate {
         player.showFormWindow(simple);
     }
 
-    public void showQuitTeamConfirm(@NotNull Team team, @NotNull Player player) {
+    public static void showQuitTeamConfirm(Team team, @NotNull Player player) {
+        if (team == null) {
+            team = TeamSystem.getInstance().getTeamByPlayer(player);
+        }
+
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("退出队伍？");
         if (team.getTeamLeader() == player) {
             simple.setContent("您是队伍的队长，退出队伍会解散队伍！\n" +
-                    "确定要退出队伍吗？\n\n");
-            simple.addButton(new ResponseElementButton("确认")
-                    .onClicked((p) -> TeamSystem.getInstance().quitTeam(p)));
+                    "确定要退出队伍 " + team.getName() + " 吗？\n\n");
         }else {
-
+            simple.setContent("确定要退出队伍 " + team.getName() + " 吗？");
         }
+        simple.addButton(new ResponseElementButton("确认")
+                .onClicked((p) -> TeamSystem.getInstance().quitTeam(p)));
+        simple.addButton(new ResponseElementButton("返回")
+                .onClicked(FormCreate::showMain));
+        player.showFormWindow(simple);
     }
 
     public static void showFindTeam(@NotNull Player player) {
