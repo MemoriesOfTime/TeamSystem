@@ -17,6 +17,7 @@ public class Team {
     private int maxPlayers;
     private Player teamLeader;
     private final HashSet<Player> players = new HashSet<>();
+    private final HashSet<Player> applicationList = new HashSet<>(); //申请列表
 
     public Team(int id, @NotNull String name, int maxPlayers, @NotNull Player teamLeader) {
         this.id = id;

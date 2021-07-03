@@ -7,7 +7,7 @@ author: "LT_Name"
 
 commands:
   team:
-    description: "TeamSystem团队系统"
+    description: "TeamSystem组队系统"
     usage: "/team"
     permission: teamsystem.user
 

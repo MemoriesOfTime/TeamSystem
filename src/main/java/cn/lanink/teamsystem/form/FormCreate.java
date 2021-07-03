@@ -4,6 +4,7 @@ import cn.lanink.teamsystem.Team;
 import cn.lanink.teamsystem.TeamSystem;
 import cn.lanink.teamsystem.form.element.ResponseElementButton;
 import cn.lanink.teamsystem.form.windows.AdvancedFormWindowCustom;
+import cn.lanink.teamsystem.form.windows.AdvancedFormWindowModal;
 import cn.lanink.teamsystem.form.windows.AdvancedFormWindowSimple;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
@@ -13,6 +14,7 @@ import cn.nukkit.form.element.ElementInput;
 import cn.nukkit.form.element.ElementLabel;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -25,7 +27,7 @@ public class FormCreate {
     }
 
     public static void showMain(@NotNull Player player) {
-        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("团队系统");
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("组队系统");
         if (TeamSystem.getInstance().getTeamByPlayer(player) == null) {
             simple.addButton(new ResponseElementButton("创建队伍")
                     .onClicked(FormCreate::showCreateTeam));
@@ -63,7 +65,7 @@ public class FormCreate {
     }
 
     public static void showJoinTeam(@NotNull Player player) {
-        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("团队系统");
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("组队系统");
         simple.addButton(new ResponseElementButton("查找队伍")
                 .onClicked(FormCreate::showFindTeam));
         simple.addButton(new ResponseElementButton("队伍列表")
@@ -100,20 +102,112 @@ public class FormCreate {
             if (team.getTeamLeader() == player) {
                 simple.addButton(new ResponseElementButton("队长转让")
                         .onClicked((p) -> {
-                            //TODO
+                            showTeamLeaderTransfer(team, p);
                         }));
+                simple.addButton(new ResponseElementButton("查看申请")
+                        .onClicked(p -> showTeamApplicationList(team, p)));
             }
             simple.addButton(new ResponseElementButton("传送功能")
                     .onClicked((p) -> {
                         //TODO
                     }));
-        }else {
+        }else if (team.getPlayers().size() < team.getMaxPlayers()) {
             simple.addButton(new ResponseElementButton("申请加入")
                     .onClicked((p) -> {
-                        //TODO
+                        team.getApplicationList().add(p);
+                        team.getTeamLeader().sendMessage("有玩家申请加入你的队伍，请使用/team 查看申请！");
+                        final AdvancedFormWindowSimple simple1 = new AdvancedFormWindowSimple("申请成功");
+                        simple1.setContent("已发送申请加入队伍 " + team.getName() + " 请等待队长同意！\n\n");
+                        simple1.addButton(new ElementButton("确认"));
+                        p.showFormWindow(simple1);
                     }));
+        }else {
+            simple.addButton(new ElementButton("队伍已满"));
         }
-        simple.addButton(new ElementButton("关闭"));
+        player.showFormWindow(simple);
+    }
+
+    /**
+     * 队长转让
+     *
+     * @param team 队伍
+     * @param player 玩家
+     */
+    public static void showTeamLeaderTransfer(@NotNull Team team, @NotNull Player player) {
+        if (team.getTeamLeader() != player) {
+            AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
+            simple.setContent("你不是队长，无法转让队长身份！\n\n");
+            simple.addButton(new ResponseElementButton("返回")
+                    .onClicked(FormCreate::showFindTeam));
+            player.showFormWindow(simple);
+            return;
+        }
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("队长转让");
+        if (team.getPlayers().size() > 1) {
+            simple.setContent("你要转让给谁？");
+            for (Player p : team.getPlayers()) {
+                if (p != team.getTeamLeader()) {
+                    simple.addButton(new ResponseElementButton(p.getName())
+                            .onClicked(clickedPlayer -> {
+                                team.setTeamLeader(p);
+                                AdvancedFormWindowSimple successfulTransfer = new AdvancedFormWindowSimple("转让成功");
+                                successfulTransfer.setContent("你已成功把队长身份转让给 " + p.getName() + " ！\n\n");
+                                successfulTransfer.addButton(new ResponseElementButton("返回")
+                                        .onClicked(cp -> showTeamInfo(team, cp)));
+                                clickedPlayer.showFormWindow(successfulTransfer);
+                            }));
+                }
+            }
+        }else {
+            simple.setContent("你的队伍没有其他人！你不能转让队长身份给空气！\n\n");
+        }
+        simple.addButton(new ResponseElementButton("返回")
+                .onClicked(p -> showTeamInfo(team, p)));
+        player.showFormWindow(simple);
+    }
+
+    /**
+     * 入队申请界面
+     *
+     * @param team 队伍
+     * @param player 打开GUI的玩家
+     */
+    public static void showTeamApplicationList(@NotNull Team team, @NotNull Player player) {
+        if (team.getTeamLeader() != player) {
+            AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
+            simple.setContent("你不是队长，无法处理入队申请！\n\n");
+            simple.addButton(new ResponseElementButton("返回")
+                    .onClicked(FormCreate::showFindTeam));
+            player.showFormWindow(simple);
+            return;
+        }
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("申请列表");
+        if (team.getApplicationList().isEmpty()) {
+            simple.setContent("暂无申请\n\n");
+        }else {
+            for (Player p : team.getApplicationList()) {
+                simple.addButton(new ResponseElementButton(p.getName())
+                        .onClicked(cp -> {
+                            AdvancedFormWindowModal modal = new AdvancedFormWindowModal(
+                                    "入队申请",
+                                    p.getName() + " 申请加入队伍",
+                                    "同意",
+                                    "拒绝");
+                            modal.onClickedTrue(cp2 -> {
+                                team.getApplicationList().remove(p);
+                                team.getPlayers().add(p);
+                                showTeamApplicationList(team, cp2);
+                            });
+                            modal.onClickedFalse(cp2 -> {
+                                team.getApplicationList().remove(p);
+                                showTeamApplicationList(team, cp2);
+                            });
+                            cp.showFormWindow(modal);
+                        }));
+            }
+        }
+        simple.addButton(new ResponseElementButton("返回")
+                .onClicked(p -> showTeamInfo(team, p)));
         player.showFormWindow(simple);
     }
 
@@ -144,7 +238,7 @@ public class FormCreate {
             String input = formResponseCustom.getInputResponse(1);
             if (input == null || input.trim().equals("")) {
                 AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
-                simple.setContent("参数不能为空！");
+                simple.setContent("参数不能为空！\n\n");
                 simple.addButton(new ResponseElementButton("返回")
                         .onClicked(FormCreate::showFindTeam));
                 p.showFormWindow(simple);
@@ -218,7 +312,35 @@ public class FormCreate {
     }
 
     public static void showTeamList(@NotNull Player player) {
+        showTeamList(player, 0);
+    }
 
+    public static void showTeamList(@NotNull Player player, int index) {
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("队伍列表");
+        ArrayList<Team> list = new ArrayList<>(TeamSystem.getInstance().getTeams().values());
+        if (list.isEmpty()) {
+            simple.setContent("还没有人创建队伍，快去创建一个吧！\n\n");
+        }
+        if (index > 1) {
+            simple.addButton(new ResponseElementButton("上一页")
+                    .onClicked(p -> showTeamList(p, Math.min(0, index - 1))));
+        }
+        int start = index * 10; //一页显示10个
+        for (int i=0; i < 10; i++) {
+            if (start >= list.size()) {
+                break;
+            }
+            Team team = list.get(start);
+            simple.addButton(new ResponseElementButton("ID:" + team.getId() + "\n名称:" + team.getName())
+                    .onClicked(p -> showTeamInfo(team, p)));
+            start++;
+        }
+        if (start < list.size()) {
+            simple.addButton(new ResponseElementButton("下一页")
+                    .onClicked(p -> showTeamList(p, index + 1)));
+        }
+        simple.addButton(new ResponseElementButton("返回").onClicked(FormCreate::showJoinTeam));
+        player.showFormWindow(simple);
     }
 
 }
