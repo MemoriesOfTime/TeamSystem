@@ -1,0 +1,16 @@
+name: TeamSystem
+main: cn.lanink.teamsystem.TeamSystem
+version: "1.0.0"
+api: ["1.0.11"]
+load: POSTWORLD
+author: "LT_Name"
+
+commands:
+  team:
+    description: "TeamSystem团队系统"
+    usage: "/team"
+    permission: teamsystem.user
+
+permissions:
+  teamsystem.user:
+    default: true
