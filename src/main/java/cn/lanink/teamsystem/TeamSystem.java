@@ -59,6 +59,7 @@ public class TeamSystem extends PluginBase {
         return false;
     }
 
+
     public void quitTeam(@NotNull Player player) {
         Team team = this.getTeamByPlayer(player);
         if (team == null) {
@@ -70,6 +71,7 @@ public class TeamSystem extends PluginBase {
             team.getPlayers().remove(player);
         }
     }
+
 
     public Team getTeamByPlayer(@NotNull Player player) {
         for (Team team : this.teams.values()) {

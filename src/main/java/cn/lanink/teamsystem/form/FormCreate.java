@@ -101,14 +101,13 @@ public class FormCreate {
         if (team.getPlayers().contains(player)) {
             if (team.getTeamLeader() == player) {
                 simple.addButton(new ResponseElementButton("队长转让")
-                        .onClicked((p) -> {
-                            showTeamLeaderTransfer(team, p);
-                        }));
+                        .onClicked((p) -> showTeamLeaderTransfer(team, p)));
                 simple.addButton(new ResponseElementButton("查看申请")
                         .onClicked(p -> showTeamApplicationList(team, p)));
             }
             simple.addButton(new ResponseElementButton("传送功能")
                     .onClicked((p) -> {
+                        showFindTeamPlayers(team,p);
                         //TODO
                     }));
         }else if (team.getPlayers().size() < team.getMaxPlayers()) {
@@ -208,6 +207,24 @@ public class FormCreate {
         }
         simple.addButton(new ResponseElementButton("返回")
                 .onClicked(p -> showTeamInfo(team, p)));
+        player.showFormWindow(simple);
+    }
+
+    public static void showFindTeamPlayers(Team team, @NotNull Player player) {
+        if (team == null) {
+            team = TeamSystem.getInstance().getTeamByPlayer(player);
+        }
+        AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("选择传送队员");
+        Team finalTeam = team;
+        simple.addButton(new ResponseElementButton("返回")
+                .onClicked(p -> showTeamInfo(finalTeam, p)));
+        for(Player player1:team.getPlayers()){
+            if(!player.equals(player1)){
+                simple.addButton(new ResponseElementButton(player1.getName()).onClicked(player2 -> {
+                    player.teleport(player1);
+                }));
+            }
+        }
         player.showFormWindow(simple);
     }
 
