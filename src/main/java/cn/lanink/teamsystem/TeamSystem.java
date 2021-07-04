@@ -38,6 +38,7 @@ public class TeamSystem extends PluginBase {
     @Override
     public void onEnable() {
         this.getServer().getPluginManager().registerEvents(new FormListener(), this);
+        this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
         this.getLogger().info("TeamSystem 加载完成！当前版本：" + VERSION);
     }
 
