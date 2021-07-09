@@ -7,10 +7,15 @@ import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.plugin.PluginBase;
 import com.google.gson.Gson;
+import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
+import com.smallaswater.easysql.v3.mysql.utils.TableType;
+import com.smallaswater.easysql.v3.mysql.utils.Types;
+import com.smallaswater.easysql.v3.mysql.utils.UserData;
 import io.netty.util.collection.IntObjectHashMap;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -30,13 +35,46 @@ public class TeamSystem extends PluginBase {
     @Getter
     private final IntObjectHashMap<Team> teams = new IntObjectHashMap<>();
 
+    @Getter
+    private SqlManager sqlManager;
+
     @Override
     public void onLoad() {
         instance = this;
+        this.saveDefaultConfig();
     }
 
     @Override
     public void onEnable() {
+        if (this.getConfig().getBoolean("MySQL.enable")) {
+            this.getLogger().info("§a正在尝试连接数据库，请稍后...");
+            HashMap<String, Object> sqlConfig = this.getConfig().get("MySQL", new HashMap<>());
+            try {
+                this.sqlManager = new SqlManager(this,
+                        new UserData(
+                                (String) sqlConfig.get("user"),
+                                (String) sqlConfig.get("passWorld"),
+                                (String) sqlConfig.get("host"),
+                                (int) sqlConfig.get("port"),
+                                (String) sqlConfig.get("database")
+                        )
+                );
+                this.sqlManager.enableWallFilter();
+                if (!this.sqlManager.isExistTable("TeamSystem")) {
+                    this.sqlManager.createTable("TeamSystem",
+                            new TableType("id", Types.INT.setValue("primary key")),
+                            new TableType("name", Types.VARCHAR),
+                            new TableType("maxPlayers", Types.INT.setValue("not null")),
+                            new TableType("teamLeader", Types.VARCHAR),
+                            new TableType("players", Types.TEXT),
+                            new TableType("applicationList", Types.TEXT.setValue(""))
+                    );
+                }
+            } catch (Exception e) {
+                this.getLogger().error("数据库连接失败!", e);
+                this.sqlManager = null;
+            }
+        }
         this.getServer().getPluginManager().registerEvents(new FormListener(), this);
         this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
         this.getLogger().info("TeamSystem 加载完成！当前版本：" + VERSION);
@@ -67,17 +105,18 @@ public class TeamSystem extends PluginBase {
         if (team == null) {
             return;
         }
-        if (team.getTeamLeader() == player) {
+        if (team.isTeamLeader(player)) {
             this.getTeams().remove(team.getId());
+            team.disband();
         }else {
-            team.getPlayers().remove(player);
+            team.removePlayer(player);
         }
     }
 
 
     public Team getTeamByPlayer(@NotNull Player player) {
         for (Team team : this.teams.values()) {
-            if (team.getPlayers().contains(player)) {
+            if (team.getPlayers().contains(player.getName())) {
                 return team;
             }
         }

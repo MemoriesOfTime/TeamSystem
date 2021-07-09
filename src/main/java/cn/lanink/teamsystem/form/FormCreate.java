@@ -100,9 +100,9 @@ public class FormCreate {
                 .append("队员：");
         if (team.getPlayers().size() > 1) {
             content.append("\n");
-            for (Player p : team.getPlayers()) {
-                if (p != team.getTeamLeader()) {
-                    content.append(p.getName()).append("\n");
+            for (String p : team.getPlayers()) {
+                if (!team.getTeamLeader().getName().equals(p)) {
+                    content.append(p).append("\n");
                 }
             }
         }else {
@@ -111,7 +111,7 @@ public class FormCreate {
         content.append("\n\n");
         simple.setContent(content.toString());
 
-        if (team.getPlayers().contains(player)) {
+        if (team.getPlayers().contains(player.getName())) {
             if (team.getTeamLeader() == player) {
                 simple.addButton(new ResponseElementButton("队长转让")
                         .onClicked((p) -> showTeamLeaderTransfer(team, p)));
@@ -123,7 +123,7 @@ public class FormCreate {
         }else if (team.getPlayers().size() < team.getMaxPlayers()) {
             simple.addButton(new ResponseElementButton("申请加入")
                     .onClicked((p) -> {
-                        team.getApplicationList().add(p);
+                        team.addApplyForPlayer(p);
                         team.getTeamLeader().sendMessage("有玩家申请加入你的队伍，请使用/team 查看申请！");
                         final AdvancedFormWindowSimple simple1 = new AdvancedFormWindowSimple("申请成功");
                         simple1.setContent("已发送申请加入队伍 " + team.getName() + " 请等待队长同意！\n\n");
@@ -154,13 +154,13 @@ public class FormCreate {
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("队长转让");
         if (team.getPlayers().size() > 1) {
             simple.setContent("你要转让给谁？");
-            for (Player p : team.getPlayers()) {
-                if (p != team.getTeamLeader()) {
-                    simple.addButton(new ResponseElementButton(p.getName())
+            for (String p : team.getPlayers()) {
+                if (!team.getTeamLeader().getName().equals(p)) {
+                    simple.addButton(new ResponseElementButton(p)
                             .onClicked(clickedPlayer -> {
-                                team.setTeamLeader(p);
+                                team.setTeamLeader(Server.getInstance().getPlayer(p));
                                 AdvancedFormWindowSimple successfulTransfer = new AdvancedFormWindowSimple("转让成功");
-                                successfulTransfer.setContent("你已成功把队长身份转让给 " + p.getName() + " ！\n\n");
+                                successfulTransfer.setContent("你已成功把队长身份转让给 " + p + " ！\n\n");
                                 successfulTransfer.addButton(new ResponseElementButton("返回")
                                         .onClicked(cp -> showTeamInfo(team, cp)));
                                 clickedPlayer.showFormWindow(successfulTransfer);
@@ -194,21 +194,21 @@ public class FormCreate {
         if (team.getApplicationList().isEmpty()) {
             simple.setContent("暂无申请\n\n");
         }else {
-            for (Player p : team.getApplicationList()) {
-                simple.addButton(new ResponseElementButton(p.getName())
+            for (String p : team.getApplicationList()) {
+                simple.addButton(new ResponseElementButton(p)
                         .onClicked(cp -> {
                             AdvancedFormWindowModal modal = new AdvancedFormWindowModal(
                                     "入队申请",
-                                    p.getName() + " 申请加入队伍",
+                                    p + " 申请加入队伍",
                                     "同意",
                                     "拒绝");
                             modal.onClickedTrue(cp2 -> {
-                                team.getApplicationList().remove(p);
-                                team.getPlayers().add(p);
+                                team.removeApplyForPlayer(Server.getInstance().getPlayer(p));
+                                team.addPlayer(Server.getInstance().getPlayer(p));
                                 showTeamApplicationList(team, cp2);
                             });
                             modal.onClickedFalse(cp2 -> {
-                                team.getApplicationList().remove(p);
+                                team.removeApplyForPlayer(Server.getInstance().getPlayer(p));
                                 showTeamApplicationList(team, cp2);
                             });
                             cp.showFormWindow(modal);
@@ -232,9 +232,9 @@ public class FormCreate {
         }
         final Team finalTeam = team;
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("选择传送队员");
-        for(Player player1 : team.getPlayers()){
-            if(player != player1){
-                simple.addButton(new ResponseElementButton(player1.getName())
+        for(String player1 : team.getPlayers()){
+            if(!player.getName().equals(player1)) {
+                simple.addButton(new ResponseElementButton(player1)
                         .onClicked(player2 -> {
                             player2.sendMessage("已发送传送申请，请等待对方确认！");
                             AdvancedFormWindowModal modal = new AdvancedFormWindowModal(
@@ -257,7 +257,7 @@ public class FormCreate {
                                         .onClicked((cp3) -> showFindTeamPlayers(finalTeam, cp3)));
                                 player2.showFormWindow(tip);
                             });
-                            player1.showFormWindow(modal);
+                            Server.getInstance().getPlayer(player1).showFormWindow(modal);
                         }));
             }
         }
@@ -378,7 +378,7 @@ public class FormCreate {
         }
         if (index > 1) {
             simple.addButton(new ResponseElementButton("上一页")
-                    .onClicked(p -> showTeamList(p, Math.min(0, index - 1))));
+                    .onClicked(p -> showTeamList(p, Math.max(0, index - 1))));
         }
         int start = index * 10; //一页显示10个
         for (int i=0; i < 10; i++) {
