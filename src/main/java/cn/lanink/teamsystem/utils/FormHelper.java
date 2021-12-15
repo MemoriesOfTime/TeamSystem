@@ -1,11 +1,11 @@
-package cn.lanink.teamsystem.form;
+package cn.lanink.teamsystem.utils;
 
+import cn.lanink.gamecore.form.element.ResponseElementButton;
+import cn.lanink.gamecore.form.windows.AdvancedFormWindowCustom;
+import cn.lanink.gamecore.form.windows.AdvancedFormWindowModal;
+import cn.lanink.gamecore.form.windows.AdvancedFormWindowSimple;
 import cn.lanink.teamsystem.Team;
 import cn.lanink.teamsystem.TeamSystem;
-import cn.lanink.teamsystem.form.element.ResponseElementButton;
-import cn.lanink.teamsystem.form.windows.AdvancedFormWindowCustom;
-import cn.lanink.teamsystem.form.windows.AdvancedFormWindowModal;
-import cn.lanink.teamsystem.form.windows.AdvancedFormWindowSimple;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.form.element.ElementButton;
@@ -20,9 +20,9 @@ import java.util.Arrays;
 /**
  * @author lt_name
  */
-public class FormCreate {
+public class FormHelper {
 
-    private FormCreate() {
+    private FormHelper() {
         throw new RuntimeException("FormCreate类不允许实例化");
     }
 
@@ -30,12 +30,12 @@ public class FormCreate {
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("组队系统");
         if (TeamSystem.getInstance().getTeamByPlayer(player) == null) {
             simple.addButton(new ResponseElementButton("创建队伍")
-                    .onClicked(FormCreate::showCreateTeam));
+                    .onClicked(FormHelper::showCreateTeam));
             simple.addButton(new ResponseElementButton("加入队伍")
-                    .onClicked(FormCreate::showJoinTeam));
+                    .onClicked(FormHelper::showJoinTeam));
         }else {
             simple.addButton(new ResponseElementButton("我的队伍")
-                    .onClicked(FormCreate::showMyTeam));
+                    .onClicked(FormHelper::showMyTeam));
             simple.addButton(new ResponseElementButton("退出队伍")
                     .onClicked((p) -> showQuitTeamConfirm(null, p)));
         }
@@ -66,17 +66,17 @@ public class FormCreate {
             TeamSystem.getInstance().getTeams().put(finalId, team);
             showMyTeam(player);
         }));
-        custom.onClosed(FormCreate::showMain);
+        custom.onClosed(FormHelper::showMain);
         player.showFormWindow(custom);
     }
 
     public static void showJoinTeam(@NotNull Player player) {
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("组队系统");
         simple.addButton(new ResponseElementButton("查找队伍")
-                .onClicked(FormCreate::showFindTeam));
+                .onClicked(FormHelper::showFindTeam));
         simple.addButton(new ResponseElementButton("队伍列表")
-                .onClicked(FormCreate::showTeamList));
-        simple.onClosed(FormCreate::showMain);
+                .onClicked(FormHelper::showTeamList));
+        simple.onClosed(FormHelper::showMain);
         player.showFormWindow(simple);
     }
 
@@ -147,7 +147,7 @@ public class FormCreate {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
             simple.setContent("你不是队长，无法转让队长身份！\n\n");
             simple.addButton(new ResponseElementButton("返回")
-                    .onClicked(FormCreate::showFindTeam));
+                    .onClicked(FormHelper::showFindTeam));
             player.showFormWindow(simple);
             return;
         }
@@ -186,7 +186,7 @@ public class FormCreate {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
             simple.setContent("你不是队长，无法处理入队申请！\n\n");
             simple.addButton(new ResponseElementButton("返回")
-                    .onClicked(FormCreate::showFindTeam));
+                    .onClicked(FormHelper::showFindTeam));
             player.showFormWindow(simple);
             return;
         }
@@ -281,7 +281,7 @@ public class FormCreate {
         simple.addButton(new ResponseElementButton("确认")
                 .onClicked((p) -> TeamSystem.getInstance().quitTeam(p)));
         simple.addButton(new ResponseElementButton("返回")
-                .onClicked(FormCreate::showMain));
+                .onClicked(FormHelper::showMain));
         player.showFormWindow(simple);
     }
 
@@ -291,11 +291,11 @@ public class FormCreate {
         custom.addElement(new ElementInput("参数", "队伍ID/队伍名称/队长或队员名称"));
         custom.onResponded((formResponseCustom, p) -> {
             String input = formResponseCustom.getInputResponse(1);
-            if (input == null || input.trim().equals("")) {
+            if (input == null || "".equals(input.trim())) {
                 AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
                 simple.setContent("参数不能为空！\n\n");
                 simple.addButton(new ResponseElementButton("返回")
-                        .onClicked(FormCreate::showFindTeam));
+                        .onClicked(FormHelper::showFindTeam));
                 p.showFormWindow(simple);
                 return;
             }
@@ -309,7 +309,7 @@ public class FormCreate {
                             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("查找失败");
                             simple.setContent("没有找到队伍ID为 " + id + " 的队伍\n\n");
                             simple.addButton(new ResponseElementButton("返回")
-                                    .onClicked(FormCreate::showFindTeam));
+                                    .onClicked(FormHelper::showFindTeam));
                             p.showFormWindow(simple);
                             return;
                         }else {
@@ -319,7 +319,7 @@ public class FormCreate {
                         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("错误");
                         simple.setContent("使用队伍ID查找时请输入数字！\n\n");
                         simple.addButton(new ResponseElementButton("返回")
-                                .onClicked(FormCreate::showFindTeam));
+                                .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(simple);
                         return;
                     }
@@ -335,7 +335,7 @@ public class FormCreate {
                     AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple("查找失败");
                     simple.setContent("没有找到队伍名称为 " + input + " 的队伍\n\n");
                     simple.addButton(new ResponseElementButton("返回")
-                            .onClicked(FormCreate::showFindTeam));
+                            .onClicked(FormHelper::showFindTeam));
                     p.showFormWindow(simple);
                     break;
                 case 2:
@@ -346,7 +346,7 @@ public class FormCreate {
                         AdvancedFormWindowSimple findFailed = new AdvancedFormWindowSimple("查找失败");
                         findFailed.setContent("玩家 " + input + " 不存在或者不在线！\n\n");
                         findFailed.addButton(new ResponseElementButton("返回")
-                                .onClicked(FormCreate::showFindTeam));
+                                .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(findFailed);
                         return;
                     }
@@ -355,7 +355,7 @@ public class FormCreate {
                         AdvancedFormWindowSimple findFailed = new AdvancedFormWindowSimple("查找失败");
                         findFailed.setContent("没有找到队长或队员是 " + input + " 的队伍\n\n");
                         findFailed.addButton(new ResponseElementButton("返回")
-                                .onClicked(FormCreate::showFindTeam));
+                                .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(findFailed);
                     }else {
                         showTeamInfo(findTeam, p);
@@ -394,7 +394,7 @@ public class FormCreate {
             simple.addButton(new ResponseElementButton("下一页")
                     .onClicked(p -> showTeamList(p, index + 1)));
         }
-        simple.addButton(new ResponseElementButton("返回").onClicked(FormCreate::showJoinTeam));
+        simple.addButton(new ResponseElementButton("返回").onClicked(FormHelper::showJoinTeam));
         player.showFormWindow(simple);
     }
 

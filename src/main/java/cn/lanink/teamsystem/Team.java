@@ -2,7 +2,7 @@ package cn.lanink.teamsystem;
 
 import cn.nukkit.Player;
 import cn.nukkit.Server;
-import com.smallaswater.easysql.v3.mysql.data.SqlData;
+import com.smallaswater.easysql.mysql.data.SqlData;
 import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +17,7 @@ import java.util.Set;
 @Getter
 public class Team {
 
-    private SqlManager sqlManager = TeamSystem.getInstance().getSqlManager();
+    private final SqlManager sqlManager = TeamSystem.getInstance().getSqlManager();
 
     private final int id;
     private String name;
@@ -126,8 +126,12 @@ public class Team {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Team)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Team)) {
+            return false;
+        }
         Team team = (Team) o;
         return id == team.id;
     }

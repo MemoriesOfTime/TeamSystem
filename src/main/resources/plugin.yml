@@ -4,6 +4,8 @@ version: "1.0.0-SNAPSHOT"
 api: ["1.0.11"]
 load: POSTWORLD
 authors: ["LT_Name", "SmallasWater"]
+depend:
+  - "MemoriesOfTime-GameCore"
 
 commands:
   team:
