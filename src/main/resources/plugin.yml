@@ -6,6 +6,7 @@ load: POSTWORLD
 authors: ["LT_Name", "SmallasWater"]
 depend:
   - "MemoriesOfTime-GameCore"
+  - "EasyMySQL"
 
 commands:
   team:
