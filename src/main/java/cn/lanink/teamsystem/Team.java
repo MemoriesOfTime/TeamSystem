@@ -114,8 +114,12 @@ public class Team {
      * 解散队伍
      */
     public void disband() {
-        //TODO 发送信息
-
+        for (String playerName : this.players) {
+            Player player = Server.getInstance().getPlayer(playerName);
+            if (player != null && player.isOnline()) {
+                player.sendMessage("您所在的队伍已解散！");
+            }
+        }
 
         this.players.clear();
         this.applicationList.clear();
