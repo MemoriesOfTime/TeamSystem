@@ -50,8 +50,9 @@ public class TeamSystem extends PluginBase {
 
     @Override
     public void onEnable() {
+        String lang = new Config(this.getDataFolder()+"/config.yml", Config.YAML).getString("language", "zh_CN");
         Config config = new Config(Config.PROPERTIES);
-        config.load(this.getResource("languages/zh_cn.properties"));
+        config.load(this.getResource("languages/"+lang+".properties"));
         this.language = new Language(config);
         if (this.getConfig().getBoolean("MySQL.enable")) {
             this.getLogger().info(language.translateString("info.connectingToDatabase"));
