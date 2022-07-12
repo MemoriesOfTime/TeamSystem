@@ -20,8 +20,8 @@ public class Team {
     private final SqlManager sqlManager = TeamSystem.getInstance().getSqlManager();
 
     private final int id;
-    private String name;
-    private int maxPlayers;
+    private final String name;
+    private final int maxPlayers;
     private String teamLeader;
     private final HashSet<String> players = new HashSet<>();
     private final HashSet<String> applicationList = new HashSet<>(); //申请列表
@@ -117,7 +117,7 @@ public class Team {
         for (String playerName : this.players) {
             Player player = Server.getInstance().getPlayer(playerName);
             if (player != null && player.isOnline()) {
-                player.sendMessage("您所在的队伍已解散！");
+                player.sendMessage(TeamSystem.getInstance().getLanguage().translateString("tips.teamDisbanded"));
             }
         }
 
