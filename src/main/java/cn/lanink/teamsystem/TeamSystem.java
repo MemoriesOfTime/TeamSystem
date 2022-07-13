@@ -1,10 +1,12 @@
 package cn.lanink.teamsystem;
 
+import cn.lanink.gamecore.utils.Language;
 import cn.lanink.teamsystem.utils.FormHelper;
 import cn.nukkit.Player;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.plugin.PluginBase;
+import cn.nukkit.utils.Config;
 import com.google.gson.Gson;
 import com.smallaswater.easysql.mysql.utils.TableType;
 import com.smallaswater.easysql.mysql.utils.Types;
@@ -37,6 +39,9 @@ public class TeamSystem extends PluginBase {
     @Getter
     private SqlManager sqlManager;
 
+    @Getter
+    private Language language;
+
     @Override
     public void onLoad() {
         instance = this;
@@ -45,8 +50,12 @@ public class TeamSystem extends PluginBase {
 
     @Override
     public void onEnable() {
+        String lang = new Config(this.getDataFolder()+"/config.yml", Config.YAML).getString("language", "zh_CN");
+        Config config = new Config(Config.PROPERTIES);
+        config.load(this.getResource("languages/"+lang+".properties"));
+        this.language = new Language(config);
         if (this.getConfig().getBoolean("MySQL.enable")) {
-            this.getLogger().info("§a正在尝试连接数据库，请稍后...");
+            this.getLogger().info(language.translateString("info.connectingToDatabase"));
             HashMap<String, Object> sqlConfig = this.getConfig().get("MySQL", new HashMap<>());
             try {
                 this.sqlManager = new SqlManager(this,
@@ -70,17 +79,16 @@ public class TeamSystem extends PluginBase {
                     );
                 }
             } catch (Exception e) {
-                this.getLogger().error("数据库连接失败!", e);
+                this.getLogger().error(language.translateString("info.connectToDatabaseFailed"), e);
                 this.sqlManager = null;
             }
         }
         this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
-        this.getLogger().info("TeamSystem 加载完成！当前版本：" + VERSION);
+        this.getLogger().info(language.translateString("info.pluginEnabled", VERSION));
     }
 
     @Override
     public void onDisable() {
-        //TODO
         this.teams.clear();
     }
 
@@ -90,7 +98,7 @@ public class TeamSystem extends PluginBase {
             if (sender instanceof Player) {
                 FormHelper.showMain((Player) sender);
             }else {
-                sender.sendMessage("§cLT_Name：你知道吗？TeamSystem的所有操作都是GUI，这意味你只能在游戏内使用此命令！");
+                sender.sendMessage(language.translateString("tips.useInGame"));
             }
             return true;
         }
@@ -120,5 +128,4 @@ public class TeamSystem extends PluginBase {
         }
         return null;
     }
-
 }
