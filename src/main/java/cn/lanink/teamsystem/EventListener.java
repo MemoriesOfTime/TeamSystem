@@ -19,5 +19,5 @@ public class EventListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         //this.teamSystem.quitTeam(event.getPlayer());
     }
-    
+
 }
