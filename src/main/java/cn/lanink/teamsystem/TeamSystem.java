@@ -68,17 +68,16 @@ public class TeamSystem extends PluginBase {
                         )
                 );
                 this.sqlManager.enableWallFilter();
-                if (this.sqlManager.isExistTable("TeamSystem")) {
-                    this.sqlManager.deleteTable("TeamSystem");
+                if (!this.sqlManager.isExistTable("TeamSystem")) {
+                    this.sqlManager.createTable("TeamSystem",
+                            new TableType("id", Types.INT.setValue("primary key")),
+                            new TableType("name", Types.VARCHAR),
+                            new TableType("maxPlayers", Types.INT.setValue("not null")),
+                            new TableType("teamLeader", Types.VARCHAR),
+                            new TableType("players", Types.TEXT),
+                            new TableType("applicationList", Types.TEXT.setValue(""))
+                    );
                 }
-                this.sqlManager.createTable("TeamSystem",
-                        new TableType("id", Types.INT.setValue("primary key")),
-                        new TableType("name", Types.VARCHAR),
-                        new TableType("maxPlayers", Types.INT.setValue("not null")),
-                        new TableType("teamLeader", Types.VARCHAR),
-                        new TableType("players", Types.TEXT),
-                        new TableType("applicationList", Types.TEXT.setValue(""))
-                );
             } catch (Exception e) {
                 this.getLogger().error(language.translateString("info.connectToDatabaseFailed"), e);
                 this.sqlManager = null;
