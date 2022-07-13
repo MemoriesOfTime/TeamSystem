@@ -15,9 +15,8 @@ public class EventListener implements Listener {
         this.teamSystem = teamSystem;
     }
 
-    //PlayerQuitEvent不会导致event.getPlayer()为空
     @EventHandler
-    public void quit(PlayerQuitEvent event) {
-        this.teamSystem.quitTeam(event.getPlayer());
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        //this.teamSystem.quitTeam(event.getPlayer());
     }
 }
