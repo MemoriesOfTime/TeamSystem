@@ -1,20 +1,17 @@
 package cn.lanink.teamsystem;
 
 import cn.lanink.gamecore.utils.Language;
+import cn.lanink.teamsystem.dao.Dao;
 import cn.lanink.teamsystem.utils.FormHelper;
 import cn.nukkit.Player;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
-import com.google.gson.Gson;
-import com.smallaswater.easysql.mysql.utils.TableType;
-import com.smallaswater.easysql.mysql.utils.Types;
-import com.smallaswater.easysql.mysql.utils.UserData;
-import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
 import io.netty.util.collection.IntObjectHashMap;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.ktorm.database.Database;
 
 import java.util.HashMap;
 import java.util.Random;
@@ -28,7 +25,7 @@ public class TeamSystem extends PluginBase {
     public static boolean debug = false;
 
     public static final Random RANDOM = new Random();
-    public static final Gson GSON = new Gson();
+    // public static final Gson GSON = new Gson();
 
     @Getter
     private static TeamSystem instance;
@@ -37,7 +34,7 @@ public class TeamSystem extends PluginBase {
     private final IntObjectHashMap<Team> teams = new IntObjectHashMap<>();
 
     @Getter
-    private SqlManager sqlManager;
+    private Database database;
 
     @Getter
     private Language language;
@@ -58,29 +55,16 @@ public class TeamSystem extends PluginBase {
             this.getLogger().info(language.translateString("info.connectingToDatabase"));
             HashMap<String, Object> sqlConfig = this.getConfig().get("MySQL", new HashMap<>());
             try {
-                this.sqlManager = new SqlManager(this,
-                        new UserData(
-                                (String) sqlConfig.get("user"),
-                                (String) sqlConfig.get("passWorld"),
-                                (String) sqlConfig.get("host"),
-                                (int) sqlConfig.get("port"),
-                                (String) sqlConfig.get("database")
-                        )
+                this.database = Dao.Companion.connect(
+                        (String) sqlConfig.get("host"),
+                        (int) sqlConfig.get("port"),
+                        (String) sqlConfig.get("database"),
+                        (String) sqlConfig.get("user"),
+                        (String) sqlConfig.get("password")
                 );
-                this.sqlManager.enableWallFilter();
-                if (!this.sqlManager.isExistTable("TeamSystem")) {
-                    this.sqlManager.createTable("TeamSystem",
-                            new TableType("id", Types.INT.setValue("primary key")),
-                            new TableType("name", Types.VARCHAR),
-                            new TableType("maxPlayers", Types.INT.setValue("not null")),
-                            new TableType("teamLeader", Types.VARCHAR),
-                            new TableType("players", Types.TEXT),
-                            new TableType("applicationList", Types.TEXT.setValue(""))
-                    );
-                }
             } catch (Exception e) {
                 this.getLogger().error(language.translateString("info.connectToDatabaseFailed"), e);
-                this.sqlManager = null;
+                this.database = null;
             }
         }
         this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
