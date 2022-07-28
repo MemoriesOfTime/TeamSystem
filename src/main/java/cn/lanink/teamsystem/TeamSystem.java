@@ -9,7 +9,6 @@ import cn.nukkit.command.CommandSender;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
 import io.netty.util.collection.IntObjectHashMap;
-import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.ktorm.database.Database;
 
@@ -26,18 +25,29 @@ public class TeamSystem extends PluginBase {
 
     public static final Random RANDOM = new Random();
     // public static final Gson GSON = new Gson();
-
-    @Getter
     private static TeamSystem instance;
 
-    @Getter
+    public static TeamSystem getInstance() {
+        return instance;
+    }
+
     private final IntObjectHashMap<Team> teams = new IntObjectHashMap<>();
 
-    @Getter
+    public IntObjectHashMap<Team> getTeams() {
+        return teams;
+    }
+
     private Database database;
 
-    @Getter
+    public Database getDatabase() {
+        return database;
+    }
+
     private Language language;
+
+    public Language getLanguage() {
+        return language;
+    }
 
     @Override
     public void onLoad() {

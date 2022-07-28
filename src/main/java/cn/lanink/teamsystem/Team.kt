@@ -15,8 +15,10 @@ import org.ktorm.entity.update
 import java.util.*
 
 /**
- * @author lt_name
+ * @author iGxnon
+ * TODO 改成 Java，把 dao 逻辑封装到 dao/Dao.kt 下
  */
+@Suppress("UNUSED")
 class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
 
     private val database: Database? = TeamSystem.getInstance().database
@@ -30,7 +32,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
             id = this@Team.id
             teamName = this@Team.name
             maxPlayers = this@Team.maxPlayers
-            teamLeader = database.onlinePlayers.find { it.playerName eq leader.name }!!
+            teamLeader = leader.name
         })
         this.teamLeader = leader.name
         players.add(leader.name)
@@ -44,7 +46,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
         if (database != null && "" == this.teamLeader) {  // 缓存失效
             val updated = database.teams.find {
                 it.id eq this.id
-            }?.teamLeader?.name
+            }?.teamLeader
             checked = this.teamLeader == updated
             if (updated != null) {
                 this.teamLeader = updated
@@ -62,13 +64,13 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
     fun isTeamLeaderRight(leader: Player): Boolean {
         return leader.name == database?.teams?.find {
             it.id eq this.id
-        }?.teamLeader?.name
+        }?.teamLeader
     }
 
     fun setTeamLeader(leader: Player) {
         database?.teams?.update(OnlineTeam{
             id = this@Team.id
-            teamLeader = database.onlinePlayers.find { it.playerName eq leader.name }!!
+            teamLeader = leader.name
         })
         this.teamLeader = leader.name
     }
@@ -86,7 +88,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
     fun getTeamLeaderRight(): Player {
         val leaderName: String = database?.teams?.find {
             it.id eq this.id
-        }?.teamLeader?.name?:""
+        }?.teamLeader?:""
         return Server.getInstance().getPlayer(leaderName)
     }
 

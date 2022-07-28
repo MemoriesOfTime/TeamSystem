@@ -14,7 +14,7 @@ interface OnlineTeam : Entity<OnlineTeam> {
     var id: Int
     var teamName: String
     var maxPlayers: Int
-    var teamLeader: OnlinePlayer
+    var teamLeader: String
 }
 
 interface ApplyEntry : Entity<ApplyEntry> {

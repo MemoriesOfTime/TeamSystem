@@ -14,7 +14,7 @@ object Teams : Table<OnlineTeam>("t_team_system") {
     val id = int("id").primaryKey().bindTo { it.id }
     val teamName = varchar("team_name").bindTo { it.teamName }
     val maxPlayers = int("max_players").bindTo { it.maxPlayers }
-    val teamLeader = int("team_leader").references(OnlinePlayers) { it.teamLeader }
+    val teamLeader = varchar("team_leader").bindTo { it.teamLeader }
 }
 
 object OnlinePlayers : Table<OnlinePlayer>("t_online_players") {
