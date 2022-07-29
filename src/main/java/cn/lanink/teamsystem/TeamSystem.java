@@ -31,10 +31,16 @@ public class TeamSystem extends PluginBase {
         return instance;
     }
 
-    private final IntObjectHashMap<Team> teams = new IntObjectHashMap<>();
-
+    /**
+     * 获取所有的 Team
+     * 此方法适用于跨服的情况
+     */
     public IntObjectHashMap<Team> getTeams() {
-        return teams;
+        return Team.TeamManager.getTeams();
+    }
+
+    public IntObjectHashMap<Team> getLocalTeams() {
+        return Team.TeamManager.getLocalTeams();
     }
 
     private Database database;
@@ -65,25 +71,28 @@ public class TeamSystem extends PluginBase {
             this.getLogger().info(language.translateString("info.connectingToDatabase"));
             HashMap<String, Object> sqlConfig = this.getConfig().get("MySQL", new HashMap<>());
             try {
-                this.database = Dao.Companion.connect(
+                this.database = Dao.INSTANCE.connect(
                         (String) sqlConfig.get("host"),
                         (int) sqlConfig.get("port"),
                         (String) sqlConfig.get("database"),
                         (String) sqlConfig.get("user"),
                         (String) sqlConfig.get("password")
                 );
+                if (Dao.INSTANCE.checkInit()) {
+                    Dao.INSTANCE.initDatabase();
+                }
             } catch (Exception e) {
                 this.getLogger().error(language.translateString("info.connectToDatabaseFailed"), e);
                 this.database = null;
             }
         }
-        this.getServer().getPluginManager().registerEvents(new EventListener(this), this);
+        this.getServer().getPluginManager().registerEvents(new EventListener(), this);
         this.getLogger().info(language.translateString("info.pluginEnabled", VERSION));
     }
 
     @Override
     public void onDisable() {
-        this.teams.clear();
+        this.getLocalTeams().clear();
     }
 
     @Override
@@ -99,24 +108,38 @@ public class TeamSystem extends PluginBase {
         return false;
     }
 
+    public Team createTeam(int teamId, String teamName, int maxPlayer, Player leader) {
+        return Team.TeamManager.createTeam(teamId, teamName, maxPlayer, leader);
+    }
+
 
     public void quitTeam(@NotNull Player player) {
-        Team team = this.getTeamByPlayer(player);
+        quitTeam(player.getName());
+    }
+
+    /**
+     * 当需要踢出一个已经下线的玩家时
+     */
+    public void quitTeam(@NotNull String playerName) {
+        Team team = this.getTeamByPlayer(playerName);
         if (team == null) {
             return;
         }
-        if (team.isTeamLeader(player)) {
-            this.getTeams().remove(team.getId());
+        if (team.isTeamLeader(playerName)) {
             team.disband();
         }else {
-            team.removePlayer(player);
+            team.removePlayer(playerName);
         }
     }
 
 
     public Team getTeamByPlayer(@NotNull Player player) {
-        for (Team team : this.teams.values()) {
-            if (team.getPlayers().contains(player.getName())) {
+        return getTeamByPlayer(player.getName());
+    }
+
+    public Team getTeamByPlayer(@NotNull String playerName) {
+        for (Team team : this.getTeams().values()) {
+            if (team.getPlayers().contains(playerName)) {
                 return team;
             }
         }

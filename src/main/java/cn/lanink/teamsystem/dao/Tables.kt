@@ -3,6 +3,7 @@ package cn.lanink.teamsystem.dao
 import org.ktorm.database.Database
 import org.ktorm.entity.sequenceOf
 import org.ktorm.schema.Table
+import org.ktorm.schema.datetime
 import org.ktorm.schema.int
 import org.ktorm.schema.varchar
 
@@ -21,6 +22,7 @@ object OnlinePlayers : Table<OnlinePlayer>("t_online_players") {
     val id = int("id").primaryKey().bindTo { it.id }
     val playerName = varchar("player_name").bindTo { it.name }
     val ofTeam = int("of_team").references(Teams) { it.ofOnlineTeam }
+    val quitAt = datetime("quit_at").bindTo { it.quitAt }
 }
 
 object ApplyList : Table<ApplyEntry>("t_applies") {

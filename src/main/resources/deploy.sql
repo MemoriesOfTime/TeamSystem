@@ -1,4 +1,7 @@
 -- auto-generated definition
+create schema s_team_sys;
+use s_team_sys;
+
 create table if not exists t_team_system
 (
     id          int primary key,
@@ -16,6 +19,7 @@ create table if not exists t_online_players
         primary key,
     player_name varchar(512) default '' not null,
     of_team     int                     null,
+    quit_at     datetime                null,
     constraint t_online_players_player_name_uindex
         unique (player_name)
 );

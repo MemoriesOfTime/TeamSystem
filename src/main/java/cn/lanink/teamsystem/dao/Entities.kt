@@ -1,12 +1,14 @@
 package cn.lanink.teamsystem.dao
 
 import org.ktorm.entity.Entity
+import java.time.LocalDateTime
 
 interface OnlinePlayer : Entity<OnlinePlayer> {
     companion object : Entity.Factory<OnlinePlayer>()
     val id: Int
     var name: String
     var ofOnlineTeam: OnlineTeam?
+    var quitAt: LocalDateTime?
 }
 
 interface OnlineTeam : Entity<OnlineTeam> {

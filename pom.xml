@@ -86,12 +86,6 @@
 <!--            <scope>provided</scope>-->
 <!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
-        <!-- JDBC -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.30</version>
-        </dependency>
         <!-- Kotlin-->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -113,6 +107,11 @@
         <dependency>
             <groupId>org.ktorm</groupId>
             <artifactId>ktorm-core</artifactId>
+            <version>${ktorm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ktorm</groupId>
+            <artifactId>ktorm-support-mysql</artifactId>
             <version>${ktorm.version}</version>
         </dependency>
     </dependencies>

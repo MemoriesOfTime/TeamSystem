@@ -54,7 +54,7 @@ public class FormHelper {
         AdvancedFormWindowCustom custom = new AdvancedFormWindowCustom(language.translateString("form.create.title"));
         int id;
         do {
-            id = TeamSystem.RANDOM.nextInt(Math.min(99999, Server.getInstance().getMaxPlayers()));
+            id = TeamSystem.RANDOM.nextInt(Math.min(99999, Server.getInstance().getMaxPlayers()*3));  // 假定为 3 个服务器的最大人数
         }while (TeamSystem.getInstance().getTeams().containsKey(id));
         final int finalId = id;
         custom.addElement(new ElementLabel(language.translateString("general.teamID") +": " + finalId));
@@ -62,11 +62,12 @@ public class FormHelper {
         custom.addElement(new ElementDropdown(language.translateString("general.teamSize"), Arrays.asList("2", "3", "4", "5")));
 
         custom.onResponded(((formResponseCustom, p) -> {
-            Team team = new Team(finalId,
+            TeamSystem.getInstance().createTeam(
+                    finalId,
                     formResponseCustom.getInputResponse(1),
-                    formResponseCustom.getDropdownResponse(2).getElementID() + 2,
-                    player);
-            TeamSystem.getInstance().getTeams().put(finalId, team);
+                    Integer.parseInt(formResponseCustom.getDropdownResponse(2).getElementContent()),
+                    player
+            );
             showMyTeam(player);
         }));
         custom.onClosed(FormHelper::showMain);
@@ -128,7 +129,7 @@ public class FormHelper {
         }else if (team.getPlayers().size() < team.getMaxPlayers()) {
             simple.addButton(new ResponseElementButton(language.translateString("form.info.button.sendRequest")+"\n\n")
                     .onClicked((p) -> {
-                        team.addApplyForPlayer(p);
+                        team.applyFrom(p);
                         team.getTeamLeader().sendMessage(language.translateString("tips.teamReceiveApplication"));
                         final AdvancedFormWindowSimple simple1 = new AdvancedFormWindowSimple(language.translateString("tips.requestApproved"));
                         simple1.setContent(language.translateString("form.info.sendApplicationSuccess", team.getName())+"\n\n");
@@ -210,12 +211,12 @@ public class FormHelper {
                                     language.translateString("general.approve"),
                                     language.translateString("general.refuse"));
                             modal.onClickedTrue(cp2 -> {
-                                team.removeApplyForPlayer(Server.getInstance().getPlayer(p));
+                                team.cancelApplyFrom(Server.getInstance().getPlayer(p));
                                 team.addPlayer(Server.getInstance().getPlayer(p));
                                 showTeamApplicationList(team, cp2);
                             });
                             modal.onClickedFalse(cp2 -> {
-                                team.removeApplyForPlayer(Server.getInstance().getPlayer(p));
+                                team.cancelApplyFrom(Server.getInstance().getPlayer(p));
                                 showTeamApplicationList(team, cp2);
                             });
                             cp.showFormWindow(modal);

@@ -3,68 +3,75 @@ package cn.lanink.teamsystem
 import cn.lanink.teamsystem.dao.*
 import cn.nukkit.Player
 import cn.nukkit.Server
+import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
 import org.ktorm.dsl.eq
 import org.ktorm.dsl.insert
 import org.ktorm.dsl.update
-import org.ktorm.entity.add
-import org.ktorm.entity.find
-import org.ktorm.entity.removeIf
-import org.ktorm.entity.update
+import org.ktorm.entity.*
 import java.util.*
 
 /**
  * @author iGxnon
- * TODO 改成 Java，把 dao 逻辑封装到 dao/Dao.kt 下
  */
 @Suppress("UNUSED")
-class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
+class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
 
-    private val database: Database? = TeamSystem.getInstance().database
-    private var teamLeader: String
-    val players = HashSet<String>()
-    val applicationList = HashSet<String>()
+    // 获取时会触发更新，如果没有远程数据库则不更新 TODO Cache
 
-    init {
-        // cache-aside
-        database?.teams?.add(OnlineTeam{
-            id = this@Team.id
-            teamName = this@Team.name
-            maxPlayers = this@Team.maxPlayers
-            teamLeader = leader.name
-        })
-        this.teamLeader = leader.name
-        players.add(leader.name)
-    }
+    constructor(id: Int, name: String, maxPlayers: Int, leader: Player) : this(
+        id, name, maxPlayers, leader.name
+    )
 
-    /**
-     * 注意该方法在多个服务器间可能不具备一致性，如果需要一致性使用 isTeamLeaderRight
-     */
-    fun isTeamLeader(leader: Player): Boolean {
-        var checked = this.teamLeader == leader.name
-        if (database != null && "" == this.teamLeader) {  // 缓存失效
-            val updated = database.teams.find {
+    private var leaderName: String = leader
+        get() {
+            database?.teams?.find {
                 it.id eq this.id
-            }?.teamLeader
-            checked = this.teamLeader == updated
-            if (updated != null) {
-                this.teamLeader = updated
-                Server.getInstance().scheduler.scheduleDelayedTask(TeamSystem.getInstance(), {
-                    this.teamLeader = ""
-                }, 2*20*60)  // 2 分钟后将缓存失效 TODO 时间
+            }?.teamLeader?.let {
+                field = it
             }
+            return field
         }
-        return checked
+
+    // players 里面可能有这个服务器没上线的玩家(在其他服务器是上线的)，如果只有一个服务器的话，那么不会有这种情况
+    // 注意，请不要使用 getPlayers().add("xxx") 的方式添加
+    val players = HashSet<String>()
+        get() {
+            database?.apply {
+                field.clear()
+            }?.onlinePlayers?.filter {
+                it.ofTeam eq this.id
+            }?.map {
+                it.name
+            }?.forEach {
+                field.add(it)
+            }
+            return field
+        }
+
+    // 申请加入列表, 可能有这个服务器没上线的玩家(在其他服务器是上线的)，如果只有一个服务器的话，那么不会有这种情况
+    // 注意，请不要使用 getApplicationList().add("xxx") 的方式添加
+    val applicationList = HashSet<String>()
+        get() {
+            database?.apply {
+                field.clear()
+            }?.applies?.filter {
+                it.team eq this.id
+            }?.map {
+                it.player.name
+            }?.forEach {
+                field.add(it)
+            }
+            return field
+        }
+
+    fun isTeamLeader(other: Player): Boolean {
+        return this.leaderName == other.name
     }
 
-    /**
-     * 该方法只适用于多个服务器之间
-     */
-    fun isTeamLeaderRight(leader: Player): Boolean {
-        return leader.name == database?.teams?.find {
-            it.id eq this.id
-        }?.teamLeader
+    fun isTeamLeader(other: String): Boolean {
+        return this.leaderName == other
     }
 
     fun setTeamLeader(leader: Player) {
@@ -72,26 +79,16 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
             id = this@Team.id
             teamLeader = leader.name
         })
-        this.teamLeader = leader.name
+        this.leaderName = leader.name
     }
 
-    /**
-     * 这个方法在多个服务器间可能不具备一致性，如果需要一致性请使用 getTeamLeaderRight
-     */
     fun getTeamLeader(): Player {
-        return Server.getInstance().getPlayer(teamLeader)
+        return Server.getInstance().getPlayer(this.leaderName)
     }
 
     /**
-     * 该方法只适用于多个服务器之间
+     * 添加玩家
      */
-    fun getTeamLeaderRight(): Player {
-        val leaderName: String = database?.teams?.find {
-            it.id eq this.id
-        }?.teamLeader?:""
-        return Server.getInstance().getPlayer(leaderName)
-    }
-
     fun addPlayer(player: Player) {
         database?.update(OnlinePlayers) {
             set(it.ofTeam, this@Team.id)
@@ -99,72 +96,151 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: Player) {
                 it.playerName eq player.name
             }
         }
-        players.add(player.name)
+        database?:players.add(player.name) // 没有远程数据库就更新本地缓存
     }
 
+    /**
+     * 移除玩家
+     */
     fun removePlayer(player: Player) {
+        removePlayer(player.name)
+    }
+
+    fun removePlayer(name: String) {
         database?.update(OnlinePlayers) {
             set(it.ofTeam, null)
             where {
-                it.playerName eq player.name
+                it.playerName eq name
             }
         }
-        players.remove(player.name)
+        database?:players.remove(name)
     }
 
-    fun addApplyForPlayer(p: Player) {
+    /**
+     * 申请加入队伍
+     */
+    fun applyFrom(p: Player) {
         database?.insert(ApplyList) { col ->
             set(col.player, database.onlinePlayers.find { it.playerName eq p.name }!!.id)
             set(col.team, this@Team.id)
         }
-        applicationList.add(p.name)
+        database?:applicationList.add(p.name)
     }
 
-    fun removeApplyForPlayer(p: Player) {
+    /**
+     * 取消申请加入队伍
+     */
+    fun cancelApplyFrom(p: Player) {
         database?.applies?.removeIf { col ->
             (col.team eq this.id) and (col.player eq database.onlinePlayers.find { it.playerName eq p.name }!!.id)
         }
-        applicationList.remove(p.name)
+        database?:applicationList.remove(p.name)
     }
 
     /**
      * 解散队伍
      */
     fun disband() {
-        database?.teams?.removeIf {
-            it.id eq this.id
-        }
-        database?.applies?.removeIf {
-            it.team eq this.id
-        }
         database?.update(OnlinePlayers) {
             set(it.ofTeam, null)
             where {
                 it.ofTeam eq this@Team.id
             }
         }
+        database?.applies?.removeIf {
+            it.team eq this.id
+        }
+        database?.teams?.removeIf {
+            it.id eq this.id
+        }
 
-        for (playerName in players) {
+
+        for (playerName in this.players) {
             val player = Server.getInstance().getPlayer(playerName)
-            if (player != null && player.isOnline) {
+            if (player != null && player.isOnline) { // 检查是否是本服玩家
                 player.sendMessage(TeamSystem.getInstance().language.translateString("tips.teamDisbanded"))
             }
         }
-        players.clear()
-        applicationList.clear()
+        database?:players.clear()
+        database?:applicationList.clear()
+        database?:teams.remove(this.id)
+        localTeams.remove(this.id)
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is Team) {
+        if (other !is Team) {
             return false
         }
-        return id == o.id
+        return id == other.id
     }
 
     override fun hashCode(): Int {
         return Objects.hash(id)
     }
+
+    companion object TeamManager {
+        private val database: Database? = SystemProvider.Database
+
+        // 所有队伍列表，获取时会自动更新，没有远程数据库时和 localTeams 等效
+        val teams = IntObjectHashMap<Team>()
+            get() {
+                database?.apply {
+                    field.clear()
+                }?.teams?.forEach {
+                    field.put(it.id, Team(
+                            it.id,
+                            it.teamName,
+                            it.maxPlayers,
+                            it.teamLeader,
+                        )
+                    )
+                }
+                return field
+            }
+
+        // 本地队伍列表，仅仅只用于缓存
+        val localTeams = IntObjectHashMap<Team>()
+
+        fun createTeam(teamId: Int, name: String, maxPlayersNum: Int, leader: Player) : Team {
+            val team = Team(teamId, name, maxPlayersNum, leader)
+            database?.teams?.add(OnlineTeam{
+                id = teamId
+                teamName = name
+                maxPlayers = maxPlayersNum
+                teamLeader = leader.name
+            })
+            localTeams.put(teamId, team)
+            database?:teams.put(teamId, team)
+            return team
+        }
+    }
+}
+// 一些增强的方法，为 kt 开发准备
+fun Player.applyFor(team: Team) {
+    team.addPlayer(this)
+}
+
+fun Player.cancelApplyFor(team: Team) {
+    team.cancelApplyFrom(this)
+}
+
+fun Player.quit(team: Team) {
+    if (team.isTeamLeader(player)) {
+        SystemProvider.Teams.remove(team.id)
+        team.disband()
+    } else {
+        team.removePlayer(player)
+    }
+}
+
+fun Player.getTeam(): Team? {
+    for (team in SystemProvider.Teams.values) {
+        if (team.players.contains(player.name)) {
+            return team
+        }
+    }
+    return null
 }
