@@ -78,7 +78,7 @@ public class TeamSystem extends PluginBase {
                         (String) sqlConfig.get("user"),
                         (String) sqlConfig.get("password")
                 );
-                if (Dao.INSTANCE.checkInit()) {
+                if (!Dao.INSTANCE.checkInit()) {
                     Dao.INSTANCE.initDatabase();
                 }
             } catch (Exception e) {
