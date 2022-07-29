@@ -154,7 +154,6 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
             it.id eq this.id
         }
 
-
         for (playerName in this.players) {
             val player = Server.getInstance().getPlayer(playerName)
             if (player != null && player.isOnline) { // 检查是否是本服玩家

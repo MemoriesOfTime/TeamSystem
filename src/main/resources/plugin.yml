@@ -5,8 +5,8 @@ api: ["1.0.11"]
 load: POSTWORLD
 authors: ["LT_Name", "SmallasWater"]
 depend:
+  - "FullKotlinLib"
   - "MemoriesOfTime-GameCore"
-  - "EasyMySQL"
 
 commands:
   team:

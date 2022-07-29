@@ -1,7 +1,6 @@
 package cn.lanink.teamsystem.dao
 
 import cn.lanink.teamsystem.SystemProvider as SP
-import cn.lanink.teamsystem.TeamSystem
 import org.ktorm.database.Database
 import org.ktorm.database.asIterable
 
@@ -71,10 +70,14 @@ object Dao {
             """.trimIndent()
 
         SP.Database?.useConnection { conn ->
-            conn.prepareStatement(initSQL).use { stmt ->
-                if (stmt.execute()) {
-                    SP.Logger.info(SP.Language.translateString("info.initDatabaseSuccess"))
-                }
+            if (conn.createStatement().apply {
+                    initSQL.split(";").filterNot {
+                        it.trimIndent() == ""
+                    }.forEach {
+                        this.addBatch(it)
+                    }
+                }.executeBatch().isNotEmpty()) {
+                SP.Logger.info(SP.Language.translateString("info.initDatabaseSuccess"))
             }
         }
     }

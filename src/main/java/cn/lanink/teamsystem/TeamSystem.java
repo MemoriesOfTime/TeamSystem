@@ -59,6 +59,12 @@ public class TeamSystem extends PluginBase {
     public void onLoad() {
         instance = this;
         this.saveDefaultConfig();
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            this.getLogger().error("Mysql Driver loaded failed!");
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
