@@ -109,13 +109,14 @@ public class FormHelper {
         content.append(language.translateString("general.teamID")).append(": ").append(team.getId()).append("\n")
                 .append(language.translateString("general.teamName")).append(": ").append(team.getName()).append("\n")
                 .append(language.translateString("general.teamSize")).append(" ").append(team.getMaxPlayers()).append("\n")
-                .append(language.translateString("general.leader")).append(" ").append(leaderName).append("\n")
+                .append(language.translateString("general.leader")).append(" ")
+                    .append(team.isOnline(leaderName) ? language.translateString("general.teamPlayerNameOnline", leaderName) : language.translateString("general.teamPlayerNameOffline", leaderName)).append("\n")
                 .append(language.translateString("general.teammates")).append(" ");
         if (team.getPlayers().size() > 1) {
             content.append("\n");
             for (String p : team.getPlayers()) {
                 if (!leaderName.equals(p)) {
-                    content.append(p).append("\n");
+                    content.append(team.isOnline(p) ? language.translateString("general.teamPlayerNameOnline", p) : language.translateString("general.teamPlayerNameOffline", p)).append("\n");
                 }
             }
         }else {
@@ -136,7 +137,7 @@ public class FormHelper {
         }else if (team.getPlayers().size() < team.getMaxPlayers()) {
             simple.addButton(new ResponseElementButton(language.translateString("form.info.button.sendRequest")+"\n\n")
                     .onClicked((p) -> {
-                        team.applyFrom(p);
+                        team.applyFrom(p.getName());
                         Player leader;
                         if ((leader = Server.getInstance().getPlayer(leaderName)) != null) {
                             leader.sendMessage(language.translateString("tips.teamReceiveApplication"));
@@ -176,7 +177,7 @@ public class FormHelper {
                 if (!leaderName.equals(p)) {
                     simple.addButton(new ResponseElementButton(p)
                             .onClicked(clickedPlayer -> {
-                                team.setTeamLeader(Server.getInstance().getPlayer(p));
+                                team.setTeamLeader(p);
                                 AdvancedFormWindowSimple successfulTransfer = new AdvancedFormWindowSimple(language.translateString("form.transfer.success.title"));
                                 successfulTransfer.setContent(language.translateString("form.transfer.success.content", p)+"\n\n");
                                 successfulTransfer.addButton(new ResponseElementButton(language.translateString("general.return"))
@@ -222,12 +223,12 @@ public class FormHelper {
                                     language.translateString("general.approve"),
                                     language.translateString("general.refuse"));
                             modal.onClickedTrue(cp2 -> {
-                                team.cancelApplyFrom(Server.getInstance().getPlayer(p));
-                                team.addPlayer(Server.getInstance().getPlayer(p));
+                                team.cancelApplyFrom(p);
+                                team.addPlayer(p);
                                 showTeamApplicationList(team, cp2);
                             });
                             modal.onClickedFalse(cp2 -> {
-                                team.cancelApplyFrom(Server.getInstance().getPlayer(p));
+                                team.cancelApplyFrom(p);
                                 showTeamApplicationList(team, cp2);
                             });
                             cp.showFormWindow(modal);

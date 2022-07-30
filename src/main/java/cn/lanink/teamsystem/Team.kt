@@ -66,7 +66,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
             return field
         }
 
-    fun isTeamLeader(other: Player): Boolean {
+    internal fun isTeamLeader(other: Player): Boolean {
         return this.leaderName == other.name
     }
 
@@ -74,12 +74,16 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
         return this.leaderName == other
     }
 
-    fun setTeamLeader(leader: Player) {
+    internal fun setTeamLeader(leader: Player) {
+        setTeamLeader(leader.name)
+    }
+
+    fun setTeamLeader(leader: String) {
         database?.teams?.update(OnlineTeam{
             id = this@Team.id
-            teamLeader = leader.name
+            teamLeader = leader
         })
-        this.leaderName = leader.name
+        this.leaderName = leader
     }
 
     /**
@@ -93,19 +97,26 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
      * 添加玩家
      */
     fun addPlayer(player: Player) {
+        addPlayer(player.name)
+    }
+
+    /**
+     * 多服下请使用这个方法
+     */
+    fun addPlayer(playerName: String) {
         database?.update(OnlinePlayers) {
             set(it.ofTeam, this@Team.id)
             where {
-                it.playerName eq player.name
+                it.playerName eq playerName
             }
         }
-        database?:players.add(player.name) // 没有远程数据库就更新本地缓存
+        database?:players.add(playerName) // 没有远程数据库就更新本地缓存
     }
 
     /**
      * 移除玩家
      */
-    fun removePlayer(player: Player) {
+    internal fun removePlayer(player: Player) {
         removePlayer(player.name)
     }
 
@@ -120,24 +131,43 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
     }
 
     /**
-     * 申请加入队伍
+     * 申请加入队伍，仅适用于 kt 开发
      */
-    fun applyFrom(p: Player) {
+    internal fun applyFrom(p: Player) {
+        applyFrom(p.name)
+    }
+
+    fun applyFrom(playerName: String) {
         database?.insert(ApplyList) { col ->
-            set(col.player, database.onlinePlayers.find { it.playerName eq p.name }!!.id)
+            set(col.player, database.onlinePlayers.find { it.playerName eq playerName }!!.id)
             set(col.team, this@Team.id)
         }
-        database?:applicationList.add(p.name)
+        database?:applicationList.add(playerName)
     }
 
     /**
      * 取消申请加入队伍
      */
-    fun cancelApplyFrom(p: Player) {
+    internal fun cancelApplyFrom(p: Player) {
+        cancelApplyFrom(p.name)
+    }
+
+    fun cancelApplyFrom(playerName: String) {
         database?.applies?.removeIf { col ->
-            (col.team eq this.id) and (col.player eq database.onlinePlayers.find { it.playerName eq p.name }!!.id)
+            (col.team eq this.id) and (col.player eq database.onlinePlayers.find { it.playerName eq playerName }!!.id)
         }
-        database?:applicationList.remove(p.name)
+        database?:applicationList.remove(playerName)
+    }
+
+    /**
+     * 适用所有情况（多服，单服）
+     */
+    fun isOnline(playerName: String): Boolean {
+        if (database == null)
+            return Server.getInstance().getPlayer(playerName) != null
+        return database.onlinePlayers.find {
+            it.playerName eq playerName
+        }?.quitAt == null
     }
 
     /**
@@ -223,11 +253,15 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
 }
 // 一些增强的方法，为 kt 开发准备
 fun Player.applyFor(team: Team) {
-    team.addPlayer(this)
+    team.applyFrom(this)
 }
 
 fun Player.cancelApplyFor(team: Team) {
     team.cancelApplyFrom(this)
+}
+
+fun Player.join(team: Team) {
+    team.addPlayer(this)
 }
 
 fun Player.quit(team: Team) {
