@@ -59,12 +59,6 @@ public class TeamSystem extends PluginBase {
     public void onLoad() {
         instance = this;
         this.saveDefaultConfig();
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            this.getLogger().error("Mysql Driver loaded failed!");
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
@@ -77,6 +71,12 @@ public class TeamSystem extends PluginBase {
             this.getLogger().info(language.translateString("info.connectingToDatabase"));
             HashMap<String, Object> sqlConfig = this.getConfig().get("MySQL", new HashMap<>());
             try {
+                try {
+                    Class.forName("com.mysql.cj.jdbc.Driver");
+                } catch (ClassNotFoundException e) {
+                    this.getLogger().error(language.translateString("info.loadMysqlDriverFailed"));
+                    throw new RuntimeException(e);
+                }
                 this.database = Dao.INSTANCE.connect(
                         (String) sqlConfig.get("host"),
                         (int) sqlConfig.get("port"),

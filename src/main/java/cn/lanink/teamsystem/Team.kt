@@ -24,7 +24,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
         id, name, maxPlayers, leader.name
     )
 
-    private var leaderName: String = leader
+    var leaderName: String = leader
         get() {
             database?.teams?.find {
                 it.id eq this.id
@@ -82,7 +82,10 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
         this.leaderName = leader.name
     }
 
-    fun getTeamLeader(): Player {
+    /**
+     * 多服下可能返回 null
+     */
+    fun getTeamLeader(): Player? {
         return Server.getInstance().getPlayer(this.leaderName)
     }
 
@@ -213,6 +216,7 @@ class Team(val id: Int, val name: String, val maxPlayers: Int, leader: String) {
             })
             localTeams.put(teamId, team)
             database?:teams.put(teamId, team)
+            team.addPlayer(leader)
             return team
         }
     }

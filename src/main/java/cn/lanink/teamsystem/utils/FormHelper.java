@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * @author lt_name
@@ -68,6 +69,11 @@ public class FormHelper {
                     Integer.parseInt(formResponseCustom.getDropdownResponse(2).getElementContent()),
                     player
             );
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             showMyTeam(player);
         }));
         custom.onClosed(FormHelper::showMain);
@@ -99,15 +105,16 @@ public class FormHelper {
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.info.title"));
         StringBuilder content = new StringBuilder();
+        String leaderName = team.getLeaderName();
         content.append(language.translateString("general.teamID")).append(": ").append(team.getId()).append("\n")
                 .append(language.translateString("general.teamName")).append(": ").append(team.getName()).append("\n")
                 .append(language.translateString("general.teamSize")).append(" ").append(team.getMaxPlayers()).append("\n")
-                .append(language.translateString("general.leader")).append(" ").append(team.getTeamLeader().getName()).append("\n")
+                .append(language.translateString("general.leader")).append(" ").append(leaderName).append("\n")
                 .append(language.translateString("general.teammates")).append(" ");
         if (team.getPlayers().size() > 1) {
             content.append("\n");
             for (String p : team.getPlayers()) {
-                if (!team.getTeamLeader().getName().equals(p)) {
+                if (!leaderName.equals(p)) {
                     content.append(p).append("\n");
                 }
             }
@@ -118,7 +125,7 @@ public class FormHelper {
         simple.setContent(content.toString());
 
         if (team.getPlayers().contains(player.getName())) {
-            if (team.getTeamLeader() == player) {
+            if (leaderName.equals(player.getName())) {
                 simple.addButton(new ResponseElementButton(language.translateString("form.info.button.transfer"))
                         .onClicked((p) -> showTeamLeaderTransfer(team, p)));
                 simple.addButton(new ResponseElementButton(language.translateString("form.info.button.checkApplications"))
@@ -130,7 +137,10 @@ public class FormHelper {
             simple.addButton(new ResponseElementButton(language.translateString("form.info.button.sendRequest")+"\n\n")
                     .onClicked((p) -> {
                         team.applyFrom(p);
-                        team.getTeamLeader().sendMessage(language.translateString("tips.teamReceiveApplication"));
+                        Player leader;
+                        if ((leader = Server.getInstance().getPlayer(leaderName)) != null) {
+                            leader.sendMessage(language.translateString("tips.teamReceiveApplication"));
+                        }
                         final AdvancedFormWindowSimple simple1 = new AdvancedFormWindowSimple(language.translateString("tips.requestApproved"));
                         simple1.setContent(language.translateString("form.info.sendApplicationSuccess", team.getName())+"\n\n");
                         simple1.addButton(new ElementButton(language.translateString("general.confirm")));
@@ -150,7 +160,8 @@ public class FormHelper {
      */
     public static void showTeamLeaderTransfer(@NotNull Team team, @NotNull Player player) {
         Language language = TeamSystem.getInstance().getLanguage();
-        if (team.getTeamLeader() != player) {
+        String leaderName = team.getLeaderName();
+        if (!leaderName.equals(player.getName())) {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
             simple.setContent(language.translateString("tips.transfer_noPermission")+"\n\n");
             simple.addButton(new ResponseElementButton(language.translateString("general.return"))
@@ -162,7 +173,7 @@ public class FormHelper {
         if (team.getPlayers().size() > 1) {
             simple.setContent(language.translateString("form.transfer.content.description"));
             for (String p : team.getPlayers()) {
-                if (!team.getTeamLeader().getName().equals(p)) {
+                if (!leaderName.equals(p)) {
                     simple.addButton(new ResponseElementButton(p)
                             .onClicked(clickedPlayer -> {
                                 team.setTeamLeader(Server.getInstance().getPlayer(p));
@@ -190,7 +201,7 @@ public class FormHelper {
      */
     public static void showTeamApplicationList(@NotNull Team team, @NotNull Player player) {
         Language language = TeamSystem.getInstance().getLanguage();
-        if (team.getTeamLeader() != player) {
+        if (!team.getLeaderName().equals(player.getName())) {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
             simple.setContent(language.translateString("form.application.noPermission")+"\n\n");
             simple.addButton(new ResponseElementButton(language.translateString("general.return"))
@@ -281,7 +292,7 @@ public class FormHelper {
         }
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.quit.title"));
-        if (team.getTeamLeader() == player) {
+        if (team.getLeaderName().equals(player.getName())) {
             simple.setContent(language.translateString("form.quit.ownerDescription")+"\n" +
                     language.translateString("form.quit.description", team.getName()) +"\n\n");
         }else {

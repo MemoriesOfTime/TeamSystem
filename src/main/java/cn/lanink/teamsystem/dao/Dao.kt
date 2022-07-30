@@ -30,7 +30,7 @@ object Dao {
                     id          int primary key,
                     team_name   varchar(512) default '' not null,
                     max_players int          default 0  not null,
-                    team_leader int                     not null,
+                    team_leader varchar(512)            not null,
                     constraint t_team_system_team_leader_uindex
                         unique (team_leader)
                 );
@@ -66,7 +66,7 @@ object Dao {
                 
                 alter table t_team_system
                     add constraint t_team_system_t_online_players_id_fk
-                        foreign key (team_leader) references t_online_players (id);
+                        foreign key (team_leader) references t_online_players (player_name);
             """.trimIndent()
 
         SP.Database?.useConnection { conn ->
