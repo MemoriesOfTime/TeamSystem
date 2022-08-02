@@ -1,10 +1,10 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db
 
-import cn.lanink.teamsystem.SystemProvider as SP
+import cn.lanink.teamsystem.TeamSystem
 import org.ktorm.database.Database
 import org.ktorm.database.asIterable
 
-object Dao {
+object Db {
 
     fun connect(host: String, port: Int, database: String, user: String, password: String): Database {
         return Database.connect("jdbc:mysql://$host:$port/$database", user = user, password = password)
@@ -12,7 +12,7 @@ object Dao {
 
     fun checkInit() : Boolean {
         val set = setOf("t_team_system", "t_online_players", "t_applies")
-        return set.size == SP.Database?.useConnection { conn ->
+        return set.size == TeamSystem.database?.useConnection { conn ->
             conn.prepareStatement("SHOW TABLES;").use { stmt ->
                 stmt.executeQuery().asIterable().map {
                     it.getString(1)
@@ -69,7 +69,7 @@ object Dao {
                         foreign key (team_leader) references t_online_players (player_name);
             """.trimIndent()
 
-        SP.Database?.useConnection { conn ->
+        TeamSystem.database?.useConnection { conn ->
             if (conn.createStatement().apply {
                     initSQL.split(";").filterNot {
                         it.trimIndent() == ""
@@ -77,7 +77,7 @@ object Dao {
                         this.addBatch(it)
                     }
                 }.executeBatch().isNotEmpty()) {
-                SP.Logger.info(SP.Language.translateString("info.initDatabaseSuccess"))
+                TeamSystem.logger.info(TeamSystem.language.translateString("info.initDatabaseSuccess"))
             }
         }
     }

@@ -1,4 +1,4 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db.mysql
 
 import org.ktorm.entity.Entity
 import java.time.LocalDateTime

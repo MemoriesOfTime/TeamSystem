@@ -1,4 +1,4 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db.mysql
 
 import org.ktorm.database.Database
 import org.ktorm.entity.sequenceOf

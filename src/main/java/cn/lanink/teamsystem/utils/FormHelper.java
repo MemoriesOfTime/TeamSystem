@@ -5,8 +5,8 @@ import cn.lanink.gamecore.form.windows.AdvancedFormWindowCustom;
 import cn.lanink.gamecore.form.windows.AdvancedFormWindowModal;
 import cn.lanink.gamecore.form.windows.AdvancedFormWindowSimple;
 import cn.lanink.gamecore.utils.Language;
-import cn.lanink.teamsystem.Team;
 import cn.lanink.teamsystem.TeamSystem;
+import cn.lanink.teamsystem.team.dao.TeamMySQLDao;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.form.element.ElementButton;
@@ -17,7 +17,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * @author lt_name
@@ -29,14 +28,14 @@ public class FormHelper {
     }
 
     public static void showMain(@NotNull Player player) {
-        Language language = TeamSystem.getInstance().getLanguage();
+        Language language = TeamSystem.Companion.getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.main.title"));
         if (TeamSystem.getInstance().getTeamByPlayer(player) == null) {
             simple.addButton(new ResponseElementButton(language.translateString("form.main.button.createTeam"))
                     .onClicked(FormHelper::showCreateTeam));
             simple.addButton(new ResponseElementButton(language.translateString("form.main.button.joinTeam"))
                     .onClicked(FormHelper::showJoinTeam));
-        }else {
+        } else {
             simple.addButton(new ResponseElementButton(language.translateString("form.main.button.myTeam"))
                     .onClicked(FormHelper::showMyTeam));
             simple.addButton(new ResponseElementButton(language.translateString("form.main.button.quitTeam"))
@@ -55,11 +54,11 @@ public class FormHelper {
         AdvancedFormWindowCustom custom = new AdvancedFormWindowCustom(language.translateString("form.create.title"));
         int id;
         do {
-            id = TeamSystem.RANDOM.nextInt(Math.min(99999, Server.getInstance().getMaxPlayers()*3));  // 假定为 3 个服务器的最大人数
-        }while (TeamSystem.getInstance().getTeams().containsKey(id));
+            id = TeamSystem.RANDOM.nextInt(Math.min(99999, Server.getInstance().getMaxPlayers() * 3));  // 假定为 3 个服务器的最大人数
+        } while (TeamSystem.getInstance().getTeams().containsKey(id));
         final int finalId = id;
-        custom.addElement(new ElementLabel(language.translateString("general.teamID") +": " + finalId));
-        custom.addElement(new ElementInput(language.translateString("general.teamName"), language.translateString("general.teamName") +": ", finalId + ""));
+        custom.addElement(new ElementLabel(language.translateString("general.teamID") + ": " + finalId));
+        custom.addElement(new ElementInput(language.translateString("general.teamName"), language.translateString("general.teamName") + ": ", finalId + ""));
         custom.addElement(new ElementDropdown(language.translateString("general.teamSize"), Arrays.asList("2", "3", "4", "5")));
 
         custom.onResponded(((formResponseCustom, p) -> {
@@ -98,10 +97,10 @@ public class FormHelper {
     /**
      * 显示队伍信息
      *
-     * @param team 队伍
+     * @param team   队伍
      * @param player 打开GUI的玩家
      */
-    public static void showTeamInfo(@NotNull Team team, @NotNull Player player) {
+    public static void showTeamInfo(@NotNull TeamMySQLDao team, @NotNull Player player) {
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.info.title"));
         StringBuilder content = new StringBuilder();
@@ -110,7 +109,7 @@ public class FormHelper {
                 .append(language.translateString("general.teamName")).append(": ").append(team.getName()).append("\n")
                 .append(language.translateString("general.teamSize")).append(" ").append(team.getMaxPlayers()).append("\n")
                 .append(language.translateString("general.leader")).append(" ")
-                    .append(team.isOnline(leaderName) ? language.translateString("general.teamPlayerNameOnline", leaderName) : language.translateString("general.teamPlayerNameOffline", leaderName)).append("\n")
+                .append(team.isOnline(leaderName) ? language.translateString("general.teamPlayerNameOnline", leaderName) : language.translateString("general.teamPlayerNameOffline", leaderName)).append("\n")
                 .append(language.translateString("general.teammates")).append(" ");
         if (team.getPlayers().size() > 1) {
             content.append("\n");
@@ -119,7 +118,7 @@ public class FormHelper {
                     content.append(team.isOnline(p) ? language.translateString("general.teamPlayerNameOnline", p) : language.translateString("general.teamPlayerNameOffline", p)).append("\n");
                 }
             }
-        }else {
+        } else {
             content.append(language.translateString("general.empty"));
         }
         content.append("\n\n");
@@ -133,9 +132,9 @@ public class FormHelper {
                         .onClicked(p -> showTeamApplicationList(team, p)));
             }
             simple.addButton(new ResponseElementButton(language.translateString("form.info.button.teleport"))
-                    .onClicked((p) -> showFindTeamPlayers(team,p)));
-        }else if (team.getPlayers().size() < team.getMaxPlayers()) {
-            simple.addButton(new ResponseElementButton(language.translateString("form.info.button.sendRequest")+"\n\n")
+                    .onClicked((p) -> showFindTeamPlayers(team, p)));
+        } else if (team.getPlayers().size() < team.getMaxPlayers()) {
+            simple.addButton(new ResponseElementButton(language.translateString("form.info.button.sendRequest") + "\n\n")
                     .onClicked((p) -> {
                         team.applyFrom(p.getName());
                         Player leader;
@@ -143,11 +142,11 @@ public class FormHelper {
                             leader.sendMessage(language.translateString("tips.teamReceiveApplication"));
                         }
                         final AdvancedFormWindowSimple simple1 = new AdvancedFormWindowSimple(language.translateString("tips.requestApproved"));
-                        simple1.setContent(language.translateString("form.info.sendApplicationSuccess", team.getName())+"\n\n");
+                        simple1.setContent(language.translateString("form.info.sendApplicationSuccess", team.getName()) + "\n\n");
                         simple1.addButton(new ElementButton(language.translateString("general.confirm")));
                         p.showFormWindow(simple1);
                     }));
-        }else {
+        } else {
             simple.addButton(new ElementButton(language.translateString("tips.teamFull")));
         }
         player.showFormWindow(simple);
@@ -156,15 +155,15 @@ public class FormHelper {
     /**
      * 队长转让
      *
-     * @param team 队伍
+     * @param team   队伍
      * @param player 打开GUI的玩家
      */
-    public static void showTeamLeaderTransfer(@NotNull Team team, @NotNull Player player) {
+    public static void showTeamLeaderTransfer(@NotNull TeamMySQLDao team, @NotNull Player player) {
         Language language = TeamSystem.getInstance().getLanguage();
         String leaderName = team.getLeaderName();
         if (!leaderName.equals(player.getName())) {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
-            simple.setContent(language.translateString("tips.transfer_noPermission")+"\n\n");
+            simple.setContent(language.translateString("tips.transfer_noPermission") + "\n\n");
             simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                     .onClicked(FormHelper::showFindTeam));
             player.showFormWindow(simple);
@@ -179,15 +178,15 @@ public class FormHelper {
                             .onClicked(clickedPlayer -> {
                                 team.setTeamLeader(p);
                                 AdvancedFormWindowSimple successfulTransfer = new AdvancedFormWindowSimple(language.translateString("form.transfer.success.title"));
-                                successfulTransfer.setContent(language.translateString("form.transfer.success.content", p)+"\n\n");
+                                successfulTransfer.setContent(language.translateString("form.transfer.success.content", p) + "\n\n");
                                 successfulTransfer.addButton(new ResponseElementButton(language.translateString("general.return"))
                                         .onClicked(cp -> showTeamInfo(team, cp)));
                                 clickedPlayer.showFormWindow(successfulTransfer);
                             }));
                 }
             }
-        }else {
-            simple.setContent(language.translateString("form.transfer.content.noPerson")+"\n\n");
+        } else {
+            simple.setContent(language.translateString("form.transfer.content.noPerson") + "\n\n");
         }
         simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                 .onClicked(p -> showTeamInfo(team, p)));
@@ -197,14 +196,14 @@ public class FormHelper {
     /**
      * 入队申请界面
      *
-     * @param team 队伍
+     * @param team   队伍
      * @param player 打开GUI的玩家
      */
-    public static void showTeamApplicationList(@NotNull Team team, @NotNull Player player) {
+    public static void showTeamApplicationList(@NotNull TeamMySQLDao team, @NotNull Player player) {
         Language language = TeamSystem.getInstance().getLanguage();
         if (!team.getLeaderName().equals(player.getName())) {
             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
-            simple.setContent(language.translateString("form.application.noPermission")+"\n\n");
+            simple.setContent(language.translateString("form.application.noPermission") + "\n\n");
             simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                     .onClicked(FormHelper::showFindTeam));
             player.showFormWindow(simple);
@@ -212,8 +211,8 @@ public class FormHelper {
         }
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.application.title"));
         if (team.getApplicationList().isEmpty()) {
-            simple.setContent(language.translateString("form.application.empty")+"\n\n");
-        }else {
+            simple.setContent(language.translateString("form.application.empty") + "\n\n");
+        } else {
             for (String p : team.getApplicationList()) {
                 simple.addButton(new ResponseElementButton(p)
                         .onClicked(cp -> {
@@ -243,18 +242,18 @@ public class FormHelper {
     /**
      * 队伍传送
      *
-     * @param team 队伍
+     * @param team   队伍
      * @param player 打开GUI的玩家
      */
-    public static void showFindTeamPlayers(Team team, @NotNull Player player) {
+    public static void showFindTeamPlayers(TeamMySQLDao team, @NotNull Player player) {
         if (team == null) {
             team = TeamSystem.getInstance().getTeamByPlayer(player);
         }
-        final Team finalTeam = team;
+        final TeamMySQLDao finalTeam = team;
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.teleport.select.title"));
-        for(String player1 : team.getPlayers()){
-            if(!player.getName().equals(player1)) {
+        for (String player1 : team.getPlayers()) {
+            if (!player.getName().equals(player1)) {
                 simple.addButton(new ResponseElementButton(player1)
                         .onClicked(player2 -> {
                             player2.sendMessage(language.translateString("tips.sendTeleportRequest"));
@@ -266,14 +265,14 @@ public class FormHelper {
                             modal.onClickedTrue(player2::teleport);
                             modal.onClickedFalse((cp2) -> {
                                 AdvancedFormWindowSimple tip = new AdvancedFormWindowSimple(language.translateString("form.teleport.handle.title"));
-                                tip.setContent(language.translateString("form.teleport.refused")+"\n\n");
+                                tip.setContent(language.translateString("form.teleport.refused") + "\n\n");
                                 tip.addButton(new ResponseElementButton(language.translateString("general.return"))
                                         .onClicked((cp3) -> showFindTeamPlayers(finalTeam, cp3)));
                                 player2.showFormWindow(tip);
                             });
                             modal.onClosed((cp2) -> {
                                 AdvancedFormWindowSimple tip = new AdvancedFormWindowSimple(language.translateString("form.teleport.handle.title"));
-                                tip.setContent(language.translateString("form.teleport.refused")+"\n\n");
+                                tip.setContent(language.translateString("form.teleport.refused") + "\n\n");
                                 tip.addButton(new ResponseElementButton(language.translateString("general.return"))
                                         .onClicked((cp3) -> showFindTeamPlayers(finalTeam, cp3)));
                                 player2.showFormWindow(tip);
@@ -287,16 +286,16 @@ public class FormHelper {
         player.showFormWindow(simple);
     }
 
-    public static void showQuitTeamConfirm(Team team, @NotNull Player player) {
+    public static void showQuitTeamConfirm(TeamMySQLDao team, @NotNull Player player) {
         if (team == null) {
             team = TeamSystem.getInstance().getTeamByPlayer(player);
         }
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.quit.title"));
         if (team.getLeaderName().equals(player.getName())) {
-            simple.setContent(language.translateString("form.quit.ownerDescription")+"\n" +
-                    language.translateString("form.quit.description", team.getName()) +"\n\n");
-        }else {
+            simple.setContent(language.translateString("form.quit.ownerDescription") + "\n" +
+                    language.translateString("form.quit.description", team.getName()) + "\n\n");
+        } else {
             simple.setContent(language.translateString("form.quit.description", team.getName()));
         }
         simple.addButton(new ResponseElementButton(language.translateString("general.confirm"))
@@ -315,7 +314,7 @@ public class FormHelper {
             String input = formResponseCustom.getInputResponse(1);
             if (input == null || "".equals(input.trim())) {
                 AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
-                simple.setContent(language.translateString("form.search.emptyParameterTip")+"\n\n");
+                simple.setContent(language.translateString("form.search.emptyParameterTip") + "\n\n");
                 simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                         .onClicked(FormHelper::showFindTeam));
                 p.showFormWindow(simple);
@@ -326,20 +325,20 @@ public class FormHelper {
                     //队伍ID
                     try {
                         int id = Integer.parseInt(input);
-                        Team team = TeamSystem.getInstance().getTeams().get(id);
+                        TeamMySQLDao team = TeamSystem.getInstance().getTeams().get(id);
                         if (team == null) {
                             AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.error.search.fail.title"));
-                            simple.setContent(language.translateString("form.error.search.notFoundByID.content", id)+"\n\n");
+                            simple.setContent(language.translateString("form.error.search.notFoundByID.content", id) + "\n\n");
                             simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                                     .onClicked(FormHelper::showFindTeam));
                             p.showFormWindow(simple);
                             return;
-                        }else {
+                        } else {
                             showTeamInfo(team, p);
                         }
                     } catch (Exception e) {
                         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("general.error"));
-                        simple.setContent(language.translateString("form.error.search.formatError.content")+"\n\n");
+                        simple.setContent(language.translateString("form.error.search.formatError.content") + "\n\n");
                         simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                                 .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(simple);
@@ -348,14 +347,14 @@ public class FormHelper {
                     break;
                 case 1:
                     //队伍名称
-                    for (Team team : TeamSystem.getInstance().getTeams().values()) {
+                    for (TeamMySQLDao team : TeamSystem.getInstance().getTeams().values()) {
                         if (team.getName().equalsIgnoreCase(input)) {
                             showTeamInfo(team, p);
                             return;
                         }
                     }
                     AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.error.search.fail.title"));
-                    simple.setContent(language.translateString("form.error.search.notFoundByName.content", input)+"\n\n");
+                    simple.setContent(language.translateString("form.error.search.notFoundByName.content", input) + "\n\n");
                     simple.addButton(new ResponseElementButton(language.translateString("general.return"))
                             .onClicked(FormHelper::showFindTeam));
                     p.showFormWindow(simple);
@@ -366,20 +365,20 @@ public class FormHelper {
                     Player findPlayer = Server.getInstance().getPlayer(input);
                     if (findPlayer == null) {
                         AdvancedFormWindowSimple findFailed = new AdvancedFormWindowSimple(language.translateString("form.error.search.fail.title"));
-                        findFailed.setContent(language.translateString("form.error.search.playerNotFound", input)+"\n\n");
+                        findFailed.setContent(language.translateString("form.error.search.playerNotFound", input) + "\n\n");
                         findFailed.addButton(new ResponseElementButton(language.translateString("general.return"))
                                 .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(findFailed);
                         return;
                     }
-                    Team findTeam = TeamSystem.getInstance().getTeamByPlayer(findPlayer);
+                    TeamMySQLDao findTeam = TeamSystem.getInstance().getTeamByPlayer(findPlayer);
                     if (findTeam == null) {
                         AdvancedFormWindowSimple findFailed = new AdvancedFormWindowSimple(language.translateString("form.error.search.fail.title"));
-                        findFailed.setContent(language.translateString("form.error.search.playerHasNoTeam", input)+"\n\n");
+                        findFailed.setContent(language.translateString("form.error.search.playerHasNoTeam", input) + "\n\n");
                         findFailed.addButton(new ResponseElementButton(language.translateString("general.return"))
                                 .onClicked(FormHelper::showFindTeam));
                         p.showFormWindow(findFailed);
-                    }else {
+                    } else {
                         showTeamInfo(findTeam, p);
                     }
                     break;
@@ -395,21 +394,21 @@ public class FormHelper {
     public static void showTeamList(@NotNull Player player, int index) {
         Language language = TeamSystem.getInstance().getLanguage();
         AdvancedFormWindowSimple simple = new AdvancedFormWindowSimple(language.translateString("form.list.title"));
-        ArrayList<Team> list = new ArrayList<>(TeamSystem.getInstance().getTeams().values());
+        ArrayList<TeamMySQLDao> list = new ArrayList<>(TeamSystem.getInstance().getTeams().values());
         if (list.isEmpty()) {
-            simple.setContent(language.translateString("form.list.emptyContent")+"\n\n");
+            simple.setContent(language.translateString("form.list.emptyContent") + "\n\n");
         }
         if (index > 1) {
             simple.addButton(new ResponseElementButton(language.translateString("general.page.back"))
                     .onClicked(p -> showTeamList(p, Math.max(0, index - 1))));
         }
         int start = index * 10; //一页显示10个
-        for (int i=0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             if (start >= list.size()) {
                 break;
             }
-            Team team = list.get(start);
-            simple.addButton(new ResponseElementButton("ID:" + team.getId() + "\n"+language.translateString("general.teamName")+":" + team.getName())
+            TeamMySQLDao team = list.get(start);
+            simple.addButton(new ResponseElementButton("ID:" + team.getId() + "\n" + language.translateString("general.teamName") + ":" + team.getName())
                     .onClicked(p -> showTeamInfo(team, p)));
             start++;
         }
