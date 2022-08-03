@@ -2,20 +2,22 @@ package cn.lanink.teamsystem
 
 import cn.lanink.gamecore.utils.Language
 import cn.lanink.teamsystem.db.Db.checkInit
-import cn.lanink.teamsystem.db.Db.connect
+import cn.lanink.teamsystem.db.Db.connectMysql
 import cn.lanink.teamsystem.db.Db.initDatabase
-import cn.lanink.teamsystem.team.dao.TeamMySQLDao
+import cn.lanink.teamsystem.team.Team
 import cn.lanink.teamsystem.team.TeamManager
 import cn.lanink.teamsystem.team.dao.TeamDao
-import cn.lanink.teamsystem.utils.FormHelper
+import cn.lanink.teamsystem.team.dao.TeamMySQLDao
 import cn.nukkit.Player
 import cn.nukkit.command.Command
 import cn.nukkit.command.CommandSender
 import cn.nukkit.plugin.PluginBase
+import cn.nukkit.plugin.PluginLogger
 import cn.nukkit.utils.Config
 import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
-import java.util.*
+import redis.clients.jedis.Jedis
+import redis.clients.jedis.JedisPool
 
 /**
  * @author iGxnon
@@ -23,20 +25,20 @@ import java.util.*
 class TeamSystem : PluginBase() {
 
     companion object {
-        const val VERSION = "?"
+        const val VERSION = "1.0.0-SNAPSHOT git-a26ac6f"
         var debug = false
-        val RANDOM = Random()
 
-        // public static final Gson GSON = new Gson();
         lateinit var instance: TeamSystem
             private set
 
-        val logger by lazy {
+        val logger: PluginLogger by lazy {
             instance.logger
         }
         val teams: IntObjectHashMap<TeamDao>
             get() = TeamManager.teams
-        var database: Database? = null
+        var mysqlDb: Database? = null
+            private set
+        var redisDb: JedisPool? = null
             private set
         lateinit var language: Language
             private set
@@ -54,33 +56,57 @@ class TeamSystem : PluginBase() {
 
     override fun onEnable() {
         val lang = Config("$dataFolder/config.yml", Config.YAML).getString("language", "zh_CN")
-        val config = Config(Config.PROPERTIES)
-        config.load(getResource("languages/$lang.properties"))
-        language = Language(config)
-        if (this.config.getBoolean("MySQL.enable")) {
-            logger.info(language.translateString("info.connectingToDatabase"))
-            val sqlConfig = this.config.get("MySQL", HashMap<String, Any>())
-            try {
+        val language = Config(Config.PROPERTIES).run {
+            load(getResource("languages/$lang.properties"))
+            Language(this)
+        }
+        val mysqlEnabled = config.getBoolean("MySQL.enable")
+        val redisEnabled = config.getBoolean("Redis.enable")
+        if (mysqlEnabled && redisEnabled) {
+            logger.error(language.translateString("info.databaseConflict"))
+            server.pluginManager.disablePlugin(this)
+        }
+        logger.info(language.translateString("info.connectingToDatabase"))
+        try {
+            if (mysqlEnabled) {
+                val sqlConfig = this.config.get("MySQL", HashMap<String, Any>())
+
                 try {
                     Class.forName("com.mysql.cj.jdbc.Driver")
                 } catch (e: ClassNotFoundException) {
                     logger.error(language.translateString("info.loadMysqlDriverFailed"))
                     throw RuntimeException(e)
                 }
-                database = connect(
-                    (sqlConfig["host"] as String?)!!,
+                mysqlDb = connectMysql(
+                    sqlConfig["host"] as String,
                     sqlConfig["port"] as Int,
-                    (sqlConfig["database"] as String?)!!,
-                    (sqlConfig["user"] as String?)!!,
-                    (sqlConfig["password"] as String?)!!
+                    sqlConfig["database"] as String,
+                    sqlConfig["user"] as String,
+                    sqlConfig["password"] as String
                 )
                 if (!checkInit()) {
                     initDatabase()
                 }
-            } catch (e: Exception) {
-                logger.error(language.translateString("info.connectToDatabaseFailed"), e)
-                database = null
             }
+            if (redisEnabled) {
+                val sqlConfig = this.config.get("Redis", HashMap<String, Any?>())
+                val pool = JedisPool(
+                    sqlConfig["host"] as String,
+                    sqlConfig["port"] as Int,
+                    sqlConfig["user"] as String?,
+                    sqlConfig["password"] as String?,
+                )
+                pool.resource.use {
+                    if (!it.isConnected || it.ping() != "PONG") {
+                        throw RuntimeException("connect to redis failed!")
+                    }
+                }
+                redisDb = pool
+            }
+        } catch (e: Exception) {
+            logger.error(language.translateString("info.connectToDatabaseFailed"), e)
+            mysqlDb = null
+            redisDb = null
         }
         server.pluginManager.registerEvents(EventListener(), this)
         logger.info(language.translateString("info.pluginEnabled", VERSION))
@@ -93,7 +119,6 @@ class TeamSystem : PluginBase() {
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
         if ("team".equals(command.name, ignoreCase = true)) {
             if (sender is Player) {
-                FormHelper.showMain(sender)
             } else {
                 sender.sendMessage(language.translateString("tips.useInGame"))
             }
@@ -102,7 +127,7 @@ class TeamSystem : PluginBase() {
         return false
     }
 
-    fun createTeam(teamId: Int, teamName: String, maxPlayer: Int, leader: Player): TeamMySQLDao {
+    fun createTeam(teamId: Int, teamName: String, maxPlayer: Int, leader: Player): Team {
         return TeamManager.createTeam(teamId, teamName, maxPlayer, leader)
     }
 
@@ -122,11 +147,11 @@ class TeamSystem : PluginBase() {
         }
     }
 
-    fun getTeamByPlayer(player: Player): TeamMySQLDao? {
+    fun getTeamByPlayer(player: Player): TeamDao? {
         return getTeamByPlayer(player.name)
     }
 
-    fun getTeamByPlayer(playerName: String): TeamMySQLDao? {
+    fun getTeamByPlayer(playerName: String): TeamDao? {
         for (team in teams.values) {
             if (team.players.contains(playerName)) {
                 return team

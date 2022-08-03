@@ -6,13 +6,13 @@ import org.ktorm.database.asIterable
 
 object Db {
 
-    fun connect(host: String, port: Int, database: String, user: String, password: String): Database {
+    fun connectMysql(host: String, port: Int, database: String, user: String, password: String): Database {
         return Database.connect("jdbc:mysql://$host:$port/$database", user = user, password = password)
     }
 
     fun checkInit() : Boolean {
         val set = setOf("t_team_system", "t_online_players", "t_applies")
-        return set.size == TeamSystem.database?.useConnection { conn ->
+        return set.size == TeamSystem.mysqlDb?.useConnection { conn ->
             conn.prepareStatement("SHOW TABLES;").use { stmt ->
                 stmt.executeQuery().asIterable().map {
                     it.getString(1)
@@ -69,7 +69,7 @@ object Db {
                         foreign key (team_leader) references t_online_players (player_name);
             """.trimIndent()
 
-        TeamSystem.database?.useConnection { conn ->
+        TeamSystem.mysqlDb?.useConnection { conn ->
             if (conn.createStatement().apply {
                     initSQL.split(";").filterNot {
                         it.trimIndent() == ""

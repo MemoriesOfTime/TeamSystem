@@ -10,14 +10,16 @@ import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
 import org.ktorm.entity.add
 import org.ktorm.entity.forEach
+import redis.clients.jedis.JedisPool
 
 object TeamManager {
-    private val database: Database? = TeamSystem.database
+    private val databaseMysql: Database? = TeamSystem.mysqlDb
+    private val databaseRedis: JedisPool? = TeamSystem.redisDb
 
     // 所有队伍列表，获取时会自动更新，没有远程数据库时和 localTeams 等效
     val teams = IntObjectHashMap<TeamDao>()
         get() {
-            database?.apply {
+            databaseMysql?.apply {
                 field.clear()
             }?.teams?.forEach {
                 field.put(it.id, TeamMySQLDao(
@@ -32,16 +34,24 @@ object TeamManager {
         }
 
 
-    fun createTeam(teamId: Int, name: String, maxPlayersNum: Int, leader: Player) : TeamMySQLDao {
-        val team = TeamMySQLDao(teamId, name, maxPlayersNum, leader)
-        database?.teams?.add(OnlineTeam{
+    fun createTeam(teamId: Int, name: String, maxPlayersNum: Int, leader: Player) : Team {
+        val dao = TeamMySQLDao(teamId, name, maxPlayersNum, leader)
+        databaseMysql?.teams?.add(OnlineTeam{
             id = teamId
             teamName = name
             maxPlayers = maxPlayersNum
-            teamLeader = leader.name
         })
-        database ?: teams.put(teamId, team)
-        team.addPlayer(leader)
-        return team
+
+        if (databaseMysql == null && databaseRedis == null) {
+            teams.put(teamId, dao)
+        }
+
+        dao.addPlayer(leader)
+        dao.setTeamLeader(leader)
+        return Team(dao)
+    }
+
+    fun disbandTeam(team: Team) {
+        team.disband()
     }
 }

@@ -22,7 +22,7 @@ class EventListener : Listener {
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent?) {
         val playerName = event!!.player.name
-        TeamSystem.database?.onlinePlayers?.apply {
+        TeamSystem.mysqlDb?.onlinePlayers?.apply {
             val found = find { it.playerName eq playerName }
             if (found == null) {
                 add(OnlinePlayer {
@@ -31,7 +31,7 @@ class EventListener : Listener {
                     quitAt = null
                 })
             } else {
-                TeamSystem.database!!.update(OnlinePlayers) {
+                TeamSystem.mysqlDb!!.update(OnlinePlayers) {
                     set(it.quitAt, null)  // 置空
                     where {
                         it.playerName eq playerName
@@ -44,7 +44,7 @@ class EventListener : Listener {
     @EventHandler
     fun onPlayerQuit(event: PlayerQuitEvent?) {
         val name = event!!.player.name
-        TeamSystem.database?.apply {
+        TeamSystem.mysqlDb?.apply {
             Server.getInstance().scheduler.scheduleDelayedTask(TeamSystem.instance, {
                 this.onlinePlayers.find {
                     it.playerName eq name

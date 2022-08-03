@@ -2,9 +2,7 @@ package cn.lanink.teamsystem.team.dao
 
 import cn.lanink.teamsystem.TeamSystem
 import cn.lanink.teamsystem.db.mysql.*
-import cn.lanink.teamsystem.team.TeamManager
 import cn.nukkit.Player
-import cn.nukkit.Server
 import org.ktorm.database.Database
 import org.ktorm.dsl.and
 import org.ktorm.dsl.eq
@@ -17,9 +15,14 @@ import java.util.*
  * @author iGxnon
  */
 @Suppress("UNUSED")
-class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: String) : TeamDao() {
+class TeamMySQLDao(
+    override val id: Int,
+    override val name: String,
+    override val maxPlayers: Int,
+    leader: String
+) : TeamDao(id, name, maxPlayers, leader) {
 
-    private val database: Database = TeamSystem.database!!
+    private val database: Database = TeamSystem.mysqlDb!!
 
     constructor(id: Int, name: String, maxPlayers: Int, leader: Player) : this(
         id, name, maxPlayers, leader.name
@@ -76,27 +79,9 @@ class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: S
             return field
         }
 
-    override fun isTeamLeader(other: Player): Boolean {
-        return this.leaderName == other.name
-    }
-
-    override fun isTeamLeader(other: String): Boolean {
-        return this.leaderName == other
-    }
-
-    override fun setTeamLeader(leader: Player) {
-        this.leaderName = leader.name
-    }
-
-    /**
-     * 多服下可能返回 null
-     */
-    override fun getTeamLeader(): Player? {
-        return Server.getInstance().getPlayer(this.leaderName)
-    }
-
-    override fun addPlayer(player: Player) {
-        this.addPlayer(player.name)
+    init {
+        leaderName = leader
+        addPlayer(leader)
     }
 
     override fun addPlayer(playerName: String) {
@@ -108,10 +93,6 @@ class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: S
         }
     }
 
-    override fun removePlayer(player: Player) {
-        this.removePlayer(player.name)
-    }
-
     override fun removePlayer(name: String) {
         database.update(OnlinePlayers) {
             set(it.ofTeam, null)
@@ -121,19 +102,11 @@ class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: S
         }
     }
 
-    override fun applyFrom(player: Player) {
-        this.applyFrom(player.name)
-    }
-
     override fun applyFrom(playerName: String) {
         database.insert(ApplyList) { col ->
             set(col.player, database.onlinePlayers.find { it.playerName eq playerName }!!.id)
             set(col.team, this@TeamMySQLDao.id)
         }
-    }
-
-    override fun cancelApplyFrom(player: Player) {
-        this.cancelApplyFrom(player.name)
     }
 
     override fun cancelApplyFrom(playerName: String) {
@@ -143,7 +116,7 @@ class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: S
     }
 
     override fun isOnline(playerName: String): Boolean {
-        if (Server.getInstance().getPlayer(playerName)?.isOnline == true) {
+        if (super.isOnline(playerName)) {
             return true
         }
         return database.onlinePlayers.find {
@@ -168,27 +141,7 @@ class TeamMySQLDao(val id: Int, val name: String, val maxPlayers: Int, leader: S
         database.teams.removeIf {
             it.id eq this.id
         }
-
-        for (playerName in this.players) {
-            val player = Server.getInstance().getPlayer(playerName)
-            if (player != null && player.isOnline) { // 检查是否是本服玩家
-                player.sendMessage(TeamSystem.language.translateString("tips.teamDisbanded"))
-            }
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is TeamMySQLDao) {
-            return false
-        }
-        return id == other.id
-    }
-
-    override fun hashCode(): Int {
-        return Objects.hash(id)
+        super.disband()
     }
 
 }

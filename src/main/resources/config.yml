@@ -7,3 +7,9 @@ MySQL:
   user: "root"
   password: "12345678"
   database: "s_team_sys"
+Redis:
+  enable: false
+  host: "127.0.0.1"
+  port: 6379
+#  user: "root"         # comment it if not used / 如果不需要就注释掉
+#  password: "114514"

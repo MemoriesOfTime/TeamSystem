@@ -1,73 +1,90 @@
 package cn.lanink.teamsystem.team.dao
 
+import cn.lanink.teamsystem.TeamSystem
 import cn.nukkit.Player
-import java.util.HashSet
+import cn.nukkit.Server
 
-abstract class TeamDao : Dao {
+abstract class TeamDao(
+    open val id: Int,
+    open val name: String,
+    open val maxPlayers: Int,
+    leader: String
+) : Dao {
 
-    override var leaderName: String
-        get() = TODO("Not yet implemented")
-        set(value) {}
-    override val players: HashSet<String>
-        get() = TODO("Not yet implemented")
-    override val applicationList: HashSet<String>
-        get() = TODO("Not yet implemented")
+    override var leaderName: String = leader
+    override val players: HashSet<String> = HashSet<String>().apply { add(leader) }
+    override val applicationList: HashSet<String> = HashSet()
 
     override fun isTeamLeader(other: Player): Boolean {
-        TODO("Not yet implemented")
+        return leaderName == other.name
     }
 
     override fun isTeamLeader(other: String): Boolean {
-        TODO("Not yet implemented")
+        return leaderName == other
     }
 
     override fun setTeamLeader(leader: Player) {
-        TODO("Not yet implemented")
+        leaderName = leader.name
     }
 
+    /**
+     * 多服下可能返回 null
+     */
     override fun getTeamLeader(): Player? {
-        TODO("Not yet implemented")
+        return Server.getInstance().getPlayer(leaderName)
     }
 
     override fun addPlayer(player: Player) {
-        TODO("Not yet implemented")
+        addPlayer(player.name)
     }
 
     override fun addPlayer(playerName: String) {
-        TODO("Not yet implemented")
+        players.add(playerName)
     }
 
     override fun removePlayer(player: Player) {
-        TODO("Not yet implemented")
+        removePlayer(player.name)
     }
 
     override fun removePlayer(name: String) {
-        TODO("Not yet implemented")
+        players.remove(name)
     }
 
     override fun applyFrom(player: Player) {
-        TODO("Not yet implemented")
+        applyFrom(player.name)
     }
 
     override fun applyFrom(playerName: String) {
-        TODO("Not yet implemented")
+        applicationList.add(playerName)
     }
 
     override fun cancelApplyFrom(player: Player) {
-        TODO("Not yet implemented")
+        cancelApplyFrom(player.name)
     }
 
     override fun cancelApplyFrom(playerName: String) {
-        TODO("Not yet implemented")
+        applicationList.remove(playerName)
     }
 
     override fun isOnline(playerName: String): Boolean {
-        TODO("Not yet implemented")
+        return (Server.getInstance().getPlayer(playerName)?.isOnline == true)
     }
 
     override fun disband() {
-        TODO("Not yet implemented")
+        for (playerName in this.players) {
+            val player = Server.getInstance().getPlayer(playerName)
+            if (player != null && player.isOnline) { // 检查是否是本服玩家
+                player.sendMessage(TeamSystem.language.translateString("tips.teamDisbanded"))
+            }
+        }
+        applicationList.clear()
+        players.clear()
     }
 }
 
-class TeamLocalDao() : TeamDao()
+class TeamLocalDao(
+    override val id: Int,
+    override val name: String,
+    override val maxPlayers: Int,
+    leader: String
+) : TeamDao(id, name, maxPlayers, leader)
