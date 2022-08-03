@@ -9,6 +9,10 @@ interface Dao {
     val players: HashSet<String>
     val applicationList: HashSet<String>
 
+    val id: Int
+    val maxPlayers: Int
+    val name: String
+
     fun isTeamLeader(other: Player): Boolean
     fun isTeamLeader(other: String): Boolean
 

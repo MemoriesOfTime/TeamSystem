@@ -56,6 +56,10 @@ class TeamRedisDao(
     init {
         leaderName = leader
         addPlayer(leader)
+        database.resource.use {
+            it.hset(key, "teamName", name)
+            it.hset(key, "maxPlayers", maxPlayers.toString())
+        }
     }
 
     override fun addPlayer(playerName: String) {
@@ -91,10 +95,6 @@ class TeamRedisDao(
         }
     }
 
-    /**
-     * 解散队伍
-     * todo 同步解散消息给其他服务器玩家
-     */
     override fun disband() {
         database.resource.use {
             it.del(key)

@@ -1,5 +1,8 @@
 package cn.lanink.teamsystem
 
+import cn.lanink.formdsl.dsl.Button
+import cn.lanink.formdsl.dsl.FormSimple
+import cn.lanink.formdsl.dsl.onPlayerClick
 import cn.lanink.gamecore.utils.Language
 import cn.lanink.teamsystem.db.Db.checkInit
 import cn.lanink.teamsystem.db.Db.connectMysql
@@ -34,7 +37,7 @@ class TeamSystem : PluginBase() {
         val logger: PluginLogger by lazy {
             instance.logger
         }
-        val teams: IntObjectHashMap<TeamDao>
+        val teams: IntObjectHashMap<Team>
             get() = TeamManager.teams
         var mysqlDb: Database? = null
             private set
@@ -42,6 +45,76 @@ class TeamSystem : PluginBase() {
             private set
         lateinit var language: Language
             private set
+
+        fun showMainForm(player: Player) {
+            val team = getTeamByPlayer(player)
+
+            FormSimple {
+                target = player
+                title = language.translateString("form.main.title")
+                if (team == null) {
+                    Button {
+                        text = language.translateString("form.main.button.createTeam")
+                        onPlayerClick {
+                            TeamManager.showCreateForm(player)
+                        }
+                    }
+                    Button {
+                        text = language.translateString("form.main.button.joinTeam")
+                        onPlayerClick {
+                            TeamManager.showJoinTeam(player)
+                        }
+                    }
+                }else {
+                    Button {
+                        text = language.translateString("form.main.button.myTeam")
+                        onPlayerClick {
+                            team.formUI.showTeamInfo(player)
+                        }
+                    }
+                    Button {
+                        text = language.translateString("form.main.button.quitTeam")
+                        onPlayerClick {
+                            team.formUI.showQuitConfirm(player)
+                        }
+                    }
+                }
+            }
+        }
+
+        fun createTeam(teamId: Int, teamName: String, maxPlayer: Int, leader: Player): Team {
+            return TeamManager.createTeam(teamId, teamName, maxPlayer, leader)
+        }
+
+        fun quitTeam(player: Player) {
+            quitTeam(player.name)
+        }
+
+        /**
+         * 当需要踢出一个已经下线的玩家时
+         */
+        fun quitTeam(playerName: String) {
+            val team = this.getTeamByPlayer(playerName) ?: return
+            if (team.isTeamLeader(playerName)) {
+                TeamManager.disbandTeam(team)
+            } else {
+                team.removePlayer(playerName)
+            }
+        }
+
+        fun getTeamByPlayer(player: Player): Team? {
+            return getTeamByPlayer(player.name)
+        }
+
+        fun getTeamByPlayer(playerName: String): Team? {
+            for (team in teams.values) {
+                if (team.players.contains(playerName)) {
+                    return team
+                }
+            }
+            return null
+        }
+
     }
 
     /**
@@ -119,6 +192,7 @@ class TeamSystem : PluginBase() {
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
         if ("team".equals(command.name, ignoreCase = true)) {
             if (sender is Player) {
+                showMainForm(sender)
             } else {
                 sender.sendMessage(language.translateString("tips.useInGame"))
             }
@@ -127,36 +201,4 @@ class TeamSystem : PluginBase() {
         return false
     }
 
-    fun createTeam(teamId: Int, teamName: String, maxPlayer: Int, leader: Player): Team {
-        return TeamManager.createTeam(teamId, teamName, maxPlayer, leader)
-    }
-
-    fun quitTeam(player: Player) {
-        quitTeam(player.name)
-    }
-
-    /**
-     * 当需要踢出一个已经下线的玩家时
-     */
-    fun quitTeam(playerName: String) {
-        val team = this.getTeamByPlayer(playerName) ?: return
-        if (team.isTeamLeader(playerName)) {
-            team.disband()
-        } else {
-            team.removePlayer(playerName)
-        }
-    }
-
-    fun getTeamByPlayer(player: Player): TeamDao? {
-        return getTeamByPlayer(player.name)
-    }
-
-    fun getTeamByPlayer(playerName: String): TeamDao? {
-        for (team in teams.values) {
-            if (team.players.contains(playerName)) {
-                return team
-            }
-        }
-        return null
-    }
 }

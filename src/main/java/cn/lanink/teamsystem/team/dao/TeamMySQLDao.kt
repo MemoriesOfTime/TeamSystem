@@ -124,10 +124,6 @@ class TeamMySQLDao(
         }?.quitAt == null
     }
 
-    /**
-     * 解散队伍
-     * todo 同步解散消息给其他服务器玩家
-     */
     override fun disband() {
         database.update(OnlinePlayers) {
             set(it.ofTeam, null)

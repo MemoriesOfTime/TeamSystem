@@ -5,9 +5,9 @@ import cn.nukkit.Player
 import cn.nukkit.Server
 
 abstract class TeamDao(
-    open val id: Int,
-    open val name: String,
-    open val maxPlayers: Int,
+    override val id: Int,
+    override val name: String,
+    override val maxPlayers: Int,
     leader: String
 ) : Dao {
 
