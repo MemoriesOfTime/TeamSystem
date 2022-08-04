@@ -19,13 +19,12 @@ Language: 中文 | [English](README_en.md)
 在使用插件之前，您必须安装以下依赖
 
 - [MemoriesOfTime-GameCore](https://github.com/MemoriesOfTime/MemoriesOfTime-GameCore)
-
+- FormDSL 模块
 - FullKotlinLib 模块
   - 在 GameCore 插件内的 `modules.txt` 内配置  `implementation(cn.lanink.module:FullKotlinLib:1.0.0)` 即可自动下载
   - 初次下载会花费一些时间，请确保下载完毕再安装 TeamSystem 插件本体
   - 您也可以在其他地方获得此模块的 jar 包，将其放入 `plugins/`(GameCore 版本低于 1.6.1 或者 使用 PM1E 核心情况下) 或者将其放入 GameCore 插件目录里的 `modules/` 下(GameCore 1.6.1 及以上) 
 
-- FormDSL 模块
 
 ## 配置
 

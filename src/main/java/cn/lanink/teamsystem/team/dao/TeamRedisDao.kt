@@ -1,7 +1,6 @@
 package cn.lanink.teamsystem.team.dao
 
 import cn.lanink.teamsystem.TeamSystem
-import cn.nukkit.Player
 
 class TeamRedisDao(
     override val id: Int,
@@ -14,6 +13,9 @@ class TeamRedisDao(
     private val key: String = "team_sys:$id"
     private val playersKey: String = "$key:players"
     private val appliesKey: String = "$key:applies"
+    companion object {
+        val quitRootKey: String = "team_sys:players:quit:"
+    }
 
     override var leaderName: String = leader
         get() {
@@ -68,9 +70,9 @@ class TeamRedisDao(
         }
     }
 
-    override fun removePlayer(name: String) {
+    override fun removePlayer(playerName: String) {
         database.resource.use {
-            it.srem(playersKey, name)
+            it.srem(playersKey, playerName)
         }
     }
 
@@ -82,7 +84,7 @@ class TeamRedisDao(
 
     override fun cancelApplyFrom(playerName: String) {
         database.resource.use {
-            it.srem(appliesKey, name)
+            it.srem(appliesKey, playerName)
         }
     }
 
@@ -91,7 +93,7 @@ class TeamRedisDao(
             return true
         }
         return database.resource.use {
-            it.exists(key)
+            !it.exists("$quitRootKey$playerName")
         }
     }
 
@@ -101,6 +103,5 @@ class TeamRedisDao(
             it.del(playersKey)
             it.del(appliesKey)
         }
-        super.disband()
     }
 }

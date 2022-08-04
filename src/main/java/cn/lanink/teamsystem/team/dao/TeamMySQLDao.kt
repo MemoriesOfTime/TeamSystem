@@ -93,11 +93,11 @@ class TeamMySQLDao(
         }
     }
 
-    override fun removePlayer(name: String) {
+    override fun removePlayer(playerName: String) {
         database.update(OnlinePlayers) {
             set(it.ofTeam, null)
             where {
-                it.playerName eq name
+                it.playerName eq playerName
             }
         }
     }
@@ -137,7 +137,6 @@ class TeamMySQLDao(
         database.teams.removeIf {
             it.id eq this.id
         }
-        super.disband()
     }
 
 }

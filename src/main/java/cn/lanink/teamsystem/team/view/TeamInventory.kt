@@ -11,4 +11,16 @@ class TeamInventory(private val team: Team) : View {
     override fun showQuitConfirm(player: Player) {
         TODO("Not yet implemented")
     }
+
+    override fun showTeamLeaderTransfer(player: Player) {
+        TODO("Not yet implemented")
+    }
+
+    override fun showTeamApplicationList(player: Player) {
+        TODO("Not yet implemented")
+    }
+
+    override fun showTeamTeleport(player: Player) {
+        TODO("Not yet implemented")
+    }
 }

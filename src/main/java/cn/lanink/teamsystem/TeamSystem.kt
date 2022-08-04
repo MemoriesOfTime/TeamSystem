@@ -28,7 +28,7 @@ import redis.clients.jedis.JedisPool
 class TeamSystem : PluginBase() {
 
     companion object {
-        const val VERSION = "1.0.0-SNAPSHOT git-a26ac6f"
+        const val VERSION = "1.0.0-SNAPSHOT git-af6817a"
         var debug = false
 
         lateinit var instance: TeamSystem
@@ -129,7 +129,7 @@ class TeamSystem : PluginBase() {
 
     override fun onEnable() {
         val lang = Config("$dataFolder/config.yml", Config.YAML).getString("language", "zh_CN")
-        val language = Config(Config.PROPERTIES).run {
+        language = Config(Config.PROPERTIES).run {
             load(getResource("languages/$lang.properties"))
             Language(this)
         }
@@ -160,8 +160,8 @@ class TeamSystem : PluginBase() {
                 if (!checkInit()) {
                     initDatabase()
                 }
-            }
-            if (redisEnabled) {
+                logger.info(language.translateString("info.connectToMysqlDatabase"))
+            } else if (redisEnabled) {
                 val sqlConfig = this.config.get("Redis", HashMap<String, Any?>())
                 val pool = JedisPool(
                     sqlConfig["host"] as String,
@@ -175,11 +175,15 @@ class TeamSystem : PluginBase() {
                     }
                 }
                 redisDb = pool
+                logger.info(language.translateString("info.connectToRedisDatabase"))
+            } else {
+                logger.info(language.translateString("info.connectToLocalDatabase"))
             }
         } catch (e: Exception) {
-            logger.error(language.translateString("info.connectToDatabaseFailed"), e)
+            logger.error(language.translateString("info.connectToRemoteDatabaseFailed"), e)
             mysqlDb = null
             redisDb = null
+            logger.info(language.translateString("info.connectToLocalDatabase"))
         }
         server.pluginManager.registerEvents(EventListener(), this)
         logger.info(language.translateString("info.pluginEnabled", VERSION))

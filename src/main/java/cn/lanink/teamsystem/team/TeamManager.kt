@@ -1,7 +1,9 @@
 package cn.lanink.teamsystem.team
 
 import cn.lanink.formdsl.dsl.*
+import cn.lanink.gamecore.form.element.ResponseElementButton
 import cn.lanink.teamsystem.TeamSystem
+import cn.lanink.teamsystem.TeamSystem.Companion.language
 import cn.lanink.teamsystem.db.mysql.OnlineTeam
 import cn.lanink.teamsystem.db.mysql.teams
 import cn.lanink.teamsystem.team.dao.Dao
@@ -9,12 +11,16 @@ import cn.lanink.teamsystem.team.dao.TeamLocalDao
 import cn.lanink.teamsystem.team.dao.TeamMySQLDao
 import cn.lanink.teamsystem.team.dao.TeamRedisDao
 import cn.nukkit.Player
+import cn.nukkit.Server
 import cn.nukkit.form.response.FormResponseData
+import cn.nukkit.form.window.FormWindow
 import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
 import org.ktorm.entity.add
 import org.ktorm.entity.forEach
 import redis.clients.jedis.JedisPool
+import java.util.*
+import kotlin.math.min
 
 object TeamManager {
     private val databaseMysql: Database? = TeamSystem.mysqlDb
@@ -69,31 +75,31 @@ object TeamManager {
         } else {
             TeamMySQLDao(teamId, name, maxPlayersNum, leader.name)
         }
-
-        dao.addPlayer(leader)
-        dao.setTeamLeader(leader)
         return Team(dao)
     }
 
     fun disbandTeam(team: Team) {
         team.disband()
+        databaseRedis?.resource?.use {
+            it.srem("team_sys:ids", team.id.toString())
+        }
         teams.remove(team.id)
     }
 
     fun showJoinTeam(player: Player) {
         FormSimple {
             target = player
-            title = TeamSystem.language.translateString("form.join.title")
+            title = language.translateString("form.join.title")
             Button {
-                text = TeamSystem.language.translateString("form.join.button.searchTeam")
+                text = language.translateString("form.join.button.searchTeam")
                 onPlayerClick {
                     showFindTeam(player)
                 }
             }
             Button {
-                text = TeamSystem.language.translateString("form.join.button.teamsList")
+                text = language.translateString("form.join.button.teamsList")
                 onPlayerClick {
-                    showTeamsForm(player)
+                    showTeamsForm(player, teams.values.toList().chunked(10))
                 }
             }
             onClose {
@@ -102,41 +108,206 @@ object TeamManager {
         }
     }
 
-    fun showFindTeam(player: Player) {
-
+    class FindResp : FormCustomResponseModel {
+        lateinit var findOption: FormResponseData
+        lateinit var searchText: String
     }
 
-    fun showTeamsForm(player: Player) {
-        FormSimple {
-            title = TeamSystem.language.translateString("form.list.title")
+    fun showFindTeam(player: Player) {
+        FormCustom<FindResp> {
+            title = language.translateString("form.search.title")
             target = player
-            teams.forEach {
-                Button {
-                    text = it.value.name
-                    onPlayerClick {
-                        it.value.formUI.showTeamInfo(player)
+            Dropdown(FindResp::findOption) {
+                text = language.translateString("form.search.dropdown.text")
+                option {
+                    +language.translateString("general.teamID")
+                    -language.translateString("general.teamName")
+                    -language.translateString("form.search.dropdown.teamMemberName")
+                }
+            }
+            Input(FindResp::searchText) {
+                text = language.translateString("form.search.input.title")
+                placeHolder = language.translateString("form.search.input.placeHolder")
+            }
+            onElementRespond {
+                if (searchText == "") {
+                    player.sendMessage(language.translateString("form.search.emptyParameterTip"))
+                    return@onElementRespond
+                }
+                when (findOption.elementID) {
+                    0 -> {
+                        try {
+                            val id = searchText.toInt()
+                            val team = teams[id]
+                            team ?: showFail(
+                                player,
+                                this@FormCustom,
+                                language.translateString("form.error.search.notFoundByID.content", id),
+                                language.translateString("form.error.search.fail.title")
+                            )
+                            team?.formUI?.showTeamInfo(player)
+                        } catch (_: Exception) {
+                            showFail(
+                                player,
+                                this@FormCustom,
+                                language.translateString("form.error.search.formatError.content"),
+                                language.translateString("general.error")
+                            )
+                        }
+                    }
+                    1 -> {
+                        for ((_, team) in teams) {
+                            if (team.name.lowercase() == searchText.lowercase()) {
+                                team.formUI.showTeamInfo(player)
+                                return@onElementRespond
+                            }
+                        }
+                        showFail(
+                            player,
+                            this@FormCustom,
+                            language.translateString("form.error.search.notFoundByName.content", searchText),
+                            language.translateString("form.error.search.fail.title")
+                        )
+                    }
+                    else -> {
+                        val team = TeamSystem.getTeamByPlayer(searchText)
+                        team ?: showFail(
+                            player,
+                            this@FormCustom,
+                            language.translateString("form.error.search.playerHasNoTeam", searchText),
+                            language.translateString("form.error.search.fail.title")
+                        )
+                        team?.formUI?.showTeamInfo(player)
                     }
                 }
             }
-            onClose {
-                showJoinTeam(player)
+        }
+    }
+
+    fun showTeamsForm(player: Player, pages: List<List<Team>>) {
+        fun page(teams: List<Team>, receiver: AdvancedFormWindowSimpleAdapter) {
+            teams.forEach { team ->
+                receiver.apply {
+                    title = language.translateString("form.list.title")
+                    Button {
+                        text = "ID: ${team.id}\n${language.translateString("general.teamName")}: ${team.name}"
+                        onPlayerClick {
+                            team.formUI.showTeamInfo(player)
+                        }
+                    }
+                }
+            }
+        }
+        val formPages = mutableListOf<AdvancedFormWindowSimpleAdapter>()
+        formPages.apply {
+            if (pages.isEmpty()) {
+                add(FormSimple {
+                    content = language.translateString("form.list.emptyContent")+"\n\n"
+                    Button { // back
+                        text = language.translateString("general.return")
+                        onPlayerClick {
+                            showJoinTeam(player)
+                        }
+                    }
+                })
+            }
+            pages.take(1).forEach {
+                add(FormSimple {
+                    page(it, this)
+                    Button { // 下一页
+                        text = language.translateString("general.page.next")
+                    }
+                })
+            }
+            pages.drop(1).dropLast(1).forEach { // 拿掉第一个和最后一个
+                val before = formPages.last()
+                val now = FormSimple {
+                    Button { // 上一页
+                        text = language.translateString("general.page.back")
+                        onPlayerClick {
+                            before.showToPlayer(player)
+                        }
+                    }
+                    page(it, this)
+                    Button { // 下一页
+                        text = language.translateString("general.page.next")
+                    }
+                }
+                (before.buttons.last() as ResponseElementButton).onPlayerClick {
+                    now.showToPlayer(player)
+                }
+                add(now)
+            }
+            pages.takeLast(1).forEach {
+                val before = formPages.last()
+                add(FormSimple {
+                    Button { // 上一页
+                        text = language.translateString("general.return")
+                        onPlayerClick {
+                            before.showToPlayer(player)
+                        }
+                    }
+                    page(it, this)
+                })
+            }
+        }
+        formPages.first().showToPlayer(player)
+    }
+
+    fun showFail(player: Player, parent: FormWindow, detail: String, tip: String) {
+        FormSimple {
+            title = tip
+            content = "$detail\n\n"
+            target = player
+            Button {
+                text = language.translateString("general.return")
+                onPlayerClick {
+                    showFormWindow(parent)
+                }
             }
         }
     }
 
     class CreateResp : FormCustomResponseModel {
-        lateinit var input: String
-        lateinit var dropdown: FormResponseData
-
+        lateinit var teamName: String
+        lateinit var teamSize: FormResponseData
     }
 
+    private val random = Random()
     fun showCreateForm(player: Player) {
+        var id: Int
+        do {
+            id = random.nextInt(99999.coerceAtMost(Server.getInstance().maxPlayers * 3))
+        } while (teams.contains(id))
         FormCustom<CreateResp> {
-
+            title = language.translateString("form.create.title")
+            target = player
+            Label("${language.translateString("general.teamID")}: $id")
+            Input(CreateResp::teamName) {
+                text = language.translateString("general.teamName")
+                placeHolder = language.translateString("general.teamName")
+                default = "$id"
+            }
+            Dropdown(CreateResp::teamSize) {
+                text = language.translateString("general.teamSize")
+                option {
+                    +"2"
+                    -"3"
+                    -"4"
+                    -"5"
+                }
+            }
+            onElementRespond {
+                createTeam(
+                    id,
+                    teamName,
+                    teamSize.elementContent.toInt(),
+                    player
+                ).formUI.showTeamInfo(player)
+            }
+            onClose {
+                TeamSystem.showMainForm(player)
+            }
         }
     }
-
-//    fun showTeamsInve(player: Player) {
-//
-//    }
 }

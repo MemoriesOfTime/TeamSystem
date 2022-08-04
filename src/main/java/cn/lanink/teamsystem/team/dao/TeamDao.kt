@@ -1,6 +1,5 @@
 package cn.lanink.teamsystem.team.dao
 
-import cn.lanink.teamsystem.TeamSystem
 import cn.nukkit.Player
 import cn.nukkit.Server
 
@@ -46,8 +45,8 @@ abstract class TeamDao(
         removePlayer(player.name)
     }
 
-    override fun removePlayer(name: String) {
-        players.remove(name)
+    override fun removePlayer(playerName: String) {
+        players.remove(playerName)
     }
 
     override fun applyFrom(player: Player) {
@@ -71,12 +70,6 @@ abstract class TeamDao(
     }
 
     override fun disband() {
-        for (playerName in this.players) {
-            val player = Server.getInstance().getPlayer(playerName)
-            if (player != null && player.isOnline) { // 检查是否是本服玩家
-                player.sendMessage(TeamSystem.language.translateString("tips.teamDisbanded"))
-            }
-        }
         applicationList.clear()
         players.clear()
     }

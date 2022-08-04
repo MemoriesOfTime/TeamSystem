@@ -23,7 +23,7 @@ interface Dao {
     fun addPlayer(playerName: String)
 
     fun removePlayer(player: Player)
-    fun removePlayer(name: String)
+    fun removePlayer(playerName: String)
 
     fun applyFrom(player: Player)
     fun applyFrom(playerName: String)
