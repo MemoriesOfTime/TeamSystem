@@ -157,7 +157,7 @@ object TeamManager {
                     }
                     1 -> {
                         for ((_, team) in teams) {
-                            if (team.name.lowercase() == searchText.lowercase()) {
+                            if (team.name.equals(searchText, ignoreCase = true)) {
                                 team.formUI.showTeamInfo(player)
                                 return@onElementRespond
                             }

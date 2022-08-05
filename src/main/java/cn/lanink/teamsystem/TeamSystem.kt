@@ -17,10 +17,15 @@ import cn.nukkit.command.CommandSender
 import cn.nukkit.plugin.PluginBase
 import cn.nukkit.plugin.PluginLogger
 import cn.nukkit.utils.Config
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
+import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * @author iGxnon
@@ -39,6 +44,8 @@ class TeamSystem : PluginBase() {
         }
         val teams: IntObjectHashMap<Team>
             get() = TeamManager.teams
+        val socketThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
         var mysqlDb: Database? = null
             private set
         var redisDb: JedisPool? = null
@@ -190,7 +197,7 @@ class TeamSystem : PluginBase() {
     }
 
     override fun onDisable() {
-
+        socketThreadExecutor.shutdown()
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
