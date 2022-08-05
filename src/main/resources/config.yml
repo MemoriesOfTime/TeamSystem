@@ -13,3 +13,9 @@ Redis:
   port: 6379
 #  user: "root"         # comment it if not used / 如果不需要就注释掉
 #  password: "114514"
+Distribute:          # 群组配置，多服之间互通需要打开
+  enable: false
+  id: "team_sys_1"   # 群组服中唯一 id
+  type: "master"     # master -> 主服  slave -> 子服   只能有一个主服
+  host: "127.0.0.1"   # 主服 ip
+  port: 11451        # 主服端口

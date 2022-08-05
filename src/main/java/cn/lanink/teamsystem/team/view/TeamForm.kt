@@ -5,6 +5,7 @@ import cn.lanink.teamsystem.TeamSystem
 import cn.lanink.teamsystem.TeamSystem.Companion.language
 import cn.lanink.teamsystem.team.Team
 import cn.nukkit.Player
+import cn.nukkit.Server
 
 class TeamForm(private val team: Team) : View {
     override fun showTeamInfo(player: Player) {
@@ -208,6 +209,26 @@ class TeamForm(private val team: Team) : View {
                     text = it
                     onPlayerClick {
                         sendMessage(language.translateString("tips.sendTeleportRequest"))
+                        val receiver: Player? = Server.getInstance().getPlayer(it)
+                        if (receiver?.isOnline == true) {
+                            FormModal {
+                                target = receiver
+                                title = language.translateString("form.teleport.handle.title")
+                                content = language.translateString("form.teleport.handle.content", player.name)
+                                trueText = language.translateString("general.approve")
+                                falseText = language.translateString("general.refuse")
+                                onTrue {
+                                    (player as Player?)?.teleport(receiver.location)
+                                }
+                                onFalse {
+                                    (player as Player?)?.sendMessage(language.translateString("form.teleport.refused"))
+                                }
+                                onClose {
+                                    (player as Player?)?.sendMessage(language.translateString("form.teleport.refused"))
+                                }
+                            }
+                            return@onPlayerClick
+                        }
                         // TODO 广播 + 跨服传送
                     }
                 }

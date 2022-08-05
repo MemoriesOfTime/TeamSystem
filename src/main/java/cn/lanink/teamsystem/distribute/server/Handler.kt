@@ -1,5 +1,6 @@
 package cn.lanink.teamsystem.distribute.server
 
+import cn.lanink.teamsystem.TeamSystem
 import cn.lanink.teamsystem.distribute.pack.Pack
 import cn.lanink.teamsystem.distribute.pack.Packet
 import cn.nukkit.Server
@@ -15,7 +16,6 @@ object Handler {
     init {
         handlerMap[Pack.ID_MESSAGE] = object : SimpleChannelInboundHandler<Packet.Message>() {
             override fun channelRead0(ctx: ChannelHandlerContext, mess: Packet.Message) {
-//                Server.getInstance().getPlayer(mess.target)?.sendMessage(mess.message)
                 SessionManager.sessions.filterNot {  // 排除发送者
                     it.key == mess.identity
                 }.forEach { (_, session) ->

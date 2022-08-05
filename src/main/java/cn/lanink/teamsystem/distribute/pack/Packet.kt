@@ -1,7 +1,9 @@
 @file:Suppress("UNUSED")
 package cn.lanink.teamsystem.distribute.pack
 
+import cn.lanink.teamsystem.TeamSystem
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufAllocator
 import io.netty.util.CharsetUtil
 
 interface Pack {
@@ -11,9 +13,20 @@ interface Pack {
         const val ID_MESSAGE: Byte = 1
         const val ID_LOGIN: Byte = 2
 
+        fun encode(pack: Packet, buf: ByteBuf) {
+            buf.writeInt(pack.magic)  // 4
+            buf.writeByte(pack.version.toInt())  // 1
+            buf.writeByte(pack.packID.toInt())  // 1
+            val data = pack.encode()
+            buf.writeInt(data.readableBytes())  // 4  length
+            buf.writeBytes(data)
+        }
+
         fun decode(buf: ByteBuf): Packet {
-            buf.skipBytes(4 + 1)
-            return when (buf.readByte()) {
+            buf.skipBytes(5)  // 4 + 1
+            val packID = buf.readByte()  // 1
+            buf.skipBytes(4)  // 4
+            return when (packID) {
                 ID_HEARTBEAT -> Packet.HeartBeatPacket()
                 ID_MESSAGE -> Packet.Message().decode(buf)
                 ID_LOGIN -> Packet.LoginPacket().decode(buf)
@@ -23,19 +36,18 @@ interface Pack {
             }
         }
     }
-    val magic: Int
+    val magic: Int          // 4 bytes
         get() = MAGIC_NUM
-    val version: Byte
+    val version: Byte       // 1 byte
         get() = 1
-    val packID: Byte
-    var identity: String
+    val packID: Byte        // 1 byte
+    // size 4 bytes
+    var identity: String  // 如果一个包有 identity 就重写该属性
         get() = ""
         set(_) = Unit
 
-    fun encode(buf: ByteBuf): ByteBuf {
-        buf.writeInt(magic)
-        buf.writeByte(version.toInt())
-        buf.writeByte(packID.toInt())
+    fun encode(): ByteBuf {
+        val buf = ByteBufAllocator.DEFAULT.ioBuffer()
         if (identity != "") {
             buf.writeInt(identity.length)
             buf.writeCharSequence(identity, CharsetUtil.UTF_8)
@@ -44,7 +56,7 @@ interface Pack {
     }
 
     fun decode(buf: ByteBuf): Packet {
-        if (buf.isReadable(4)) {
+        if (identity != "") {
             val idLen = buf.readInt()
             identity = buf.readCharSequence(idLen, CharsetUtil.UTF_8).toString()
         }
@@ -55,13 +67,14 @@ interface Pack {
 sealed class Packet : Pack {
     data class Message(
         override val packID: Byte = Pack.ID_MESSAGE,
-        override var identity: String = "",
         var target: String = "",
         var message: String = ""
     ): Packet() {
 
-        override fun encode(buf: ByteBuf): ByteBuf {
-            super.encode(buf)
+        override var identity: String = TeamSystem.identity
+
+        override fun encode(): ByteBuf {
+            val buf = super.encode()
             buf.writeInt(target.length)
             buf.writeCharSequence(target, CharsetUtil.UTF_8)
 
@@ -83,7 +96,10 @@ sealed class Packet : Pack {
 
     data class HeartBeatPacket(override val packID: Byte = Pack.ID_HEARTBEAT) : Packet()
 
-    data class LoginPacket(override val packID: Byte = Pack.ID_LOGIN, override var identity: String = "") : Packet()
+    data class LoginPacket(
+        override val packID: Byte = Pack.ID_LOGIN,
+        override var identity: String = TeamSystem.identity
+    ) : Packet()
 
     data class ErrorPack(override val packID: Byte = -1) : Packet()
 }

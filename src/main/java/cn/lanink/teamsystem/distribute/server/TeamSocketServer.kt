@@ -43,9 +43,9 @@ fun startServer(port: Int): Pair<EventLoopGroup, EventLoopGroup> {
         @Throws(Exception::class)
         override fun operationComplete(channelFuture: ChannelFuture) {
             if (channelFuture.isSuccess) {
-                TeamSystem.logger.info("群组服已经开启")
+                TeamSystem.logger.info("Server: 群组服在端口 $port 上已经开启")
             } else {
-                TeamSystem.logger.info("群组服开启失败")
+                TeamSystem.logger.info("Server: 群组服开启失败")
             }
         }
     })
@@ -75,7 +75,7 @@ class MagicNumValidator : LengthFieldBasedFrameDecoder(Int.MAX_VALUE, LENGTH_FIE
     }
 
     companion object {
-        private const val LENGTH_FIELD_OFFSET = 7
+        private const val LENGTH_FIELD_OFFSET = 6
         private const val LENGTH_FIELD_LENGTH = 4
     }
 }
@@ -85,7 +85,7 @@ object PacketCodecHandler : MessageToMessageCodec<ByteBuf, Packet>() {
 
     override fun encode(ctx: ChannelHandlerContext, msg: Packet, list: MutableList<Any>) {
         val byteBuf = ctx.channel().alloc().ioBuffer()
-        msg.encode(byteBuf)
+        Pack.encode(msg, byteBuf)
         list.add(byteBuf)
     }
 
@@ -106,7 +106,7 @@ object ResponseHandler: SimpleChannelInboundHandler<Packet>() {
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Packet) {
         val handler: SimpleChannelInboundHandler<out Packet>? = Handler.handlerMap[msg.packID]
-        handler ?: TeamSystem.logger.warning("未找到对应数据包的 Handler") //TODO translate
+        handler ?: TeamSystem.logger.warning("Server: 未找到对应数据包的 Handler") //TODO translate
         handler?.channelRead(ctx, msg)
     }
 
@@ -115,7 +115,7 @@ object ResponseHandler: SimpleChannelInboundHandler<Packet>() {
         val socket = ctx.channel().remoteAddress() as InetSocketAddress
         val clientIP = socket.address.hostAddress
         val clientPort = socket.port
-        TeamSystem.logger.warning("子服务器掉线: $clientIP : $clientPort")
+        TeamSystem.logger.warning("Server: 子服务器掉线: $clientIP : $clientPort")
         super.channelInactive(ctx)
     }
 }

@@ -7,25 +7,22 @@ import cn.lanink.gamecore.utils.Language
 import cn.lanink.teamsystem.db.Db.checkInit
 import cn.lanink.teamsystem.db.Db.connectMysql
 import cn.lanink.teamsystem.db.Db.initDatabase
+import cn.lanink.teamsystem.distribute.client.startClient
+import cn.lanink.teamsystem.distribute.pack.Packet
+import cn.lanink.teamsystem.distribute.server.startServer
 import cn.lanink.teamsystem.team.Team
 import cn.lanink.teamsystem.team.TeamManager
-import cn.lanink.teamsystem.team.dao.TeamDao
-import cn.lanink.teamsystem.team.dao.TeamMySQLDao
 import cn.nukkit.Player
 import cn.nukkit.command.Command
 import cn.nukkit.command.CommandSender
 import cn.nukkit.plugin.PluginBase
 import cn.nukkit.plugin.PluginLogger
 import cn.nukkit.utils.Config
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import io.netty.channel.Channel
+import io.netty.channel.EventLoopGroup
 import io.netty.util.collection.IntObjectHashMap
 import org.ktorm.database.Database
-import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
-import java.util.concurrent.Executor
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 /**
  * @author iGxnon
@@ -33,7 +30,7 @@ import java.util.concurrent.Executors
 class TeamSystem : PluginBase() {
 
     companion object {
-        const val VERSION = "1.0.0-SNAPSHOT git-af6817a"
+        const val VERSION = "1.0.0-SNAPSHOT git-7061e56"
         var debug = false
 
         lateinit var instance: TeamSystem
@@ -44,11 +41,18 @@ class TeamSystem : PluginBase() {
         }
         val teams: IntObjectHashMap<Team>
             get() = TeamManager.teams
-        val socketThreadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
         var mysqlDb: Database? = null
             private set
         var redisDb: JedisPool? = null
+            private set
+        var serverChannel: Channel? = null
+            private set
+        var serverLoops: Pair<EventLoopGroup, EventLoopGroup>? = null
+            private set
+        var clientLoop: EventLoopGroup? = null
+            private set
+        var identity: String = ""
             private set
         lateinit var language: Language
             private set
@@ -142,6 +146,7 @@ class TeamSystem : PluginBase() {
         }
         val mysqlEnabled = config.getBoolean("MySQL.enable")
         val redisEnabled = config.getBoolean("Redis.enable")
+        val distributionEnabled = config.getBoolean("Distribute.enable")
         if (mysqlEnabled && redisEnabled) {
             logger.error(language.translateString("info.databaseConflict"))
             server.pluginManager.disablePlugin(this)
@@ -149,7 +154,7 @@ class TeamSystem : PluginBase() {
         logger.info(language.translateString("info.connectingToDatabase"))
         try {
             if (mysqlEnabled) {
-                val sqlConfig = this.config.get("MySQL", HashMap<String, Any>())
+                val sqlConfig = config.get("MySQL", HashMap<String, Any>())
 
                 try {
                     Class.forName("com.mysql.cj.jdbc.Driver")
@@ -169,7 +174,7 @@ class TeamSystem : PluginBase() {
                 }
                 logger.info(language.translateString("info.connectToMysqlDatabase"))
             } else if (redisEnabled) {
-                val sqlConfig = this.config.get("Redis", HashMap<String, Any?>())
+                val sqlConfig = config.get("Redis", HashMap<String, Any?>())
                 val pool = JedisPool(
                     sqlConfig["host"] as String,
                     sqlConfig["port"] as Int,
@@ -192,12 +197,40 @@ class TeamSystem : PluginBase() {
             redisDb = null
             logger.info(language.translateString("info.connectToLocalDatabase"))
         }
+        if (distributionEnabled) {
+            val distributeConfig = config.get("Distribute", HashMap<String, Any>())
+            val host = distributeConfig["host"] as String
+            val port = distributeConfig["port"] as Int
+            identity = distributeConfig["id"] as String
+            if (distributeConfig["type"] == "master") {
+                serverLoops = startServer(port)
+                val out = startClient(identity, host, port)
+                serverChannel = out.first
+                clientLoop = out.second
+            }else if (distributeConfig["type"] == "slave") {
+                val out = startClient(identity, host, port)
+                serverChannel = out.first
+                clientLoop = out.second
+            } else {
+                logger.warning("Distribute:type 配置错误")
+            }
+        }
         server.pluginManager.registerEvents(EventListener(), this)
         logger.info(language.translateString("info.pluginEnabled", VERSION))
     }
 
     override fun onDisable() {
-        socketThreadExecutor.shutdown()
+        clientLoop?.shutdownGracefully()?.sync()
+        serverLoops?.apply {
+            first.shutdownGracefully().sync().addListener {
+                if (!it.isSuccess)
+                    logger.warning("未能正常关闭群组主服服务1")
+            }
+            second.shutdownGracefully().sync().addListener {
+                if (!it.isSuccess)
+                    logger.warning("未能正常关闭群组主服服务2")
+            }
+        }
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
