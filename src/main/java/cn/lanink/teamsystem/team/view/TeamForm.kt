@@ -72,7 +72,7 @@ class TeamForm(private val team: Team) : View {
                 Button {
                     text = language.translateString("form.info.button.sendRequest")
                     onPlayerClick {
-                        team.applyFrom(player)
+                        team.applyFrom(player.name)
                         FormModal {
                             target = player
                             title = language.translateString("tips.requestApproved")

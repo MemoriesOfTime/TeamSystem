@@ -39,25 +39,33 @@ class Team(private val dao: Dao) : Dao by dao {
         }
         // 发送给群组服 master
         serverChannel?.writeAndFlush(Packet.Message(
-            dest = getMemberLoginAt(playerName),
+            dest = getMemberLoginAt(leader),
             target = leader,
             message = language.translateString("tips.teamReceiveApplication", playerName)
         ))
+    }
+
+    override fun applyFrom(player: Player) {
+        applyFrom(player.name)
     }
 
     override fun addPlayer(playerName: String) {
         dao.addPlayer(playerName)
         val player: Player? = Server.getInstance().getPlayer(playerName)
         if (player?.isOnline == true) {
-            player.sendMessage(language.translateString("tip.joined"))
+            player.sendMessage(language.translateString("tip.joined", name))
             return
         }
         // 告诉其他服务器里面的这个玩家
         serverChannel?.writeAndFlush(Packet.Message(
             dest = getMemberLoginAt(playerName),
             target = playerName,
-            message = language.translateString("tip.joined")
+            message = language.translateString("tip.joined", name)
         ))
+    }
+
+    override fun addPlayer(player: Player) {
+        addPlayer(player.name)
     }
 
     override fun disband() {

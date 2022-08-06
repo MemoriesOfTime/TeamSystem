@@ -30,7 +30,7 @@ import redis.clients.jedis.JedisPool
 class TeamSystem : PluginBase() {
 
     companion object {
-        const val VERSION = "1.0.0-SNAPSHOT git-259d55e"
+        const val VERSION = "1.0.0-SNAPSHOT git-e739dbe"
         var debug = false
 
         lateinit var instance: TeamSystem
@@ -53,6 +53,8 @@ class TeamSystem : PluginBase() {
         var clientLoop: EventLoopGroup? = null
             private set
         var identity: String = ""
+            private set
+        var exposeHost: String = ""
             private set
         lateinit var language: Language
             private set
@@ -213,6 +215,7 @@ class TeamSystem : PluginBase() {
             val host = distributeConfig["host"] as String
             val port = distributeConfig["port"] as Int
             identity = distributeConfig["id"] as String
+            exposeHost = distributeConfig["exposed_host"] as String
             if (identity == "") {
                 logger.error(language.translateString("info.distributeConfigWrong3"))
                 server.pluginManager.disablePlugin(this)

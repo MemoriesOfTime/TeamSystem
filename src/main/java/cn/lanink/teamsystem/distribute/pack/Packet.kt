@@ -55,16 +55,18 @@ interface Pack {
     fun encode(): ByteBuf {
         val buf = Unpooled.buffer(identity.length + 4)
         if (identity != "") {
-            buf.writeInt(identity.length)
-            buf.writeCharSequence(identity, CharsetUtil.UTF_8)
+            val bytes = identity.toByteArray(CharsetUtil.UTF_8)
+            buf.writeInt(bytes.size)
+            buf.writeBytes(bytes)
         }
         return buf
     }
 
     fun decode(buf: ByteBuf): Packet {
         if (identity != "") {
-            val idLen = buf.readInt()
-            identity = buf.readCharSequence(idLen, CharsetUtil.UTF_8).toString()
+            val bytes = ByteArray(buf.readInt())
+            buf.readBytes(bytes)
+            identity = bytes.toString(CharsetUtil.UTF_8)
         }
         return this as Packet
     }
@@ -80,13 +82,13 @@ sealed class Packet : Pack {
 
         override fun encode(): ByteBuf {
             val buf = super.encode()
-            buf.writeInt(dest.length)
+            buf.writeInt(dest.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(dest, CharsetUtil.UTF_8)
 
-            buf.writeInt(target.length)
+            buf.writeInt(target.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(target, CharsetUtil.UTF_8)
 
-            buf.writeInt(message.length)
+            buf.writeInt(message.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(message, CharsetUtil.UTF_8)
             return buf
         }
@@ -122,13 +124,13 @@ sealed class Packet : Pack {
 
         override fun encode(): ByteBuf {
             val buf = super.encode()
-            buf.writeInt(dest.length)
+            buf.writeInt(dest.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(dest, CharsetUtil.UTF_8)
 
-            buf.writeInt(sender.length)
+            buf.writeInt(sender.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(sender, CharsetUtil.UTF_8)
 
-            buf.writeInt(target.length)
+            buf.writeInt(target.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(target, CharsetUtil.UTF_8)
             return buf
         }
@@ -159,15 +161,15 @@ sealed class Packet : Pack {
 
         override fun encode(): ByteBuf {
             val buf = super.encode()
-            buf.writeInt(dest.length)
+            buf.writeInt(dest.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(dest, CharsetUtil.UTF_8)
 
-            buf.writeInt(target.length)
+            buf.writeInt(target.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(target, CharsetUtil.UTF_8)
 
             buf.writeBoolean(ok)
 
-            buf.writeInt(ip.length)
+            buf.writeInt(ip.toByteArray(CharsetUtil.UTF_8).size)
             buf.writeCharSequence(ip, CharsetUtil.UTF_8)
 
             buf.writeInt(port)

@@ -37,5 +37,11 @@ object Handler {
                 SessionManager.sessions[mess.dest]?.pipeline?.writeAndFlush(mess)
             }
         }
+
+        handlerMap[Pack.ID_TELEPORT_RESP] = object : SimpleChannelInboundHandler<Packet.TeleportResponsePacket>() {
+            override fun channelRead0(ctx: ChannelHandlerContext, mess: Packet.TeleportResponsePacket) {
+                SessionManager.sessions[mess.dest]?.pipeline?.writeAndFlush(mess)
+            }
+        }
     }
 }

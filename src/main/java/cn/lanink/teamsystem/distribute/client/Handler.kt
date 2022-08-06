@@ -44,7 +44,7 @@ object Handler {
                             dest = mess.identity,
                             target = mess.sender,
                             ok = true,
-                            ip = Server.getInstance().ip,
+                            ip = TeamSystem.exposeHost,
                             port = Server.getInstance().port
                         ))
                     }

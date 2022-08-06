@@ -63,7 +63,7 @@ class EventListener : Listener {
                     player?.teleport(transferTeleportQueue[playerName])
                 }
                 transferTeleportQueue.remove(playerName)
-            }, 40)  // 延迟 2 s
+            }, 20)  // 延迟 1 s
         }
     }
 
