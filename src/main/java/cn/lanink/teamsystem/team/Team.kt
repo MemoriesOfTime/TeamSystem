@@ -30,7 +30,7 @@ class Team(private val dao: Dao) : Dao by dao {
     override fun applyFrom(playerName: String) {
         dao.applyFrom(playerName)
         val leader = leaderName
-        if (!isOnline(leader))  // leader 暂时离线
+        if (!isMemberOnline(leader))  // leader 暂时离线
             return
         val player: Player? = Server.getInstance().getPlayer(leader)
         if (player?.isOnline == true) { // leader 在本服
@@ -38,7 +38,11 @@ class Team(private val dao: Dao) : Dao by dao {
             return
         }
         // 发送给群组服 master
-        serverChannel?.writeAndFlush(Packet.Message(target = leader, message = language.translateString("tips.teamReceiveApplication", playerName)))
+        serverChannel?.writeAndFlush(Packet.Message(
+            dest = getMemberLoginAt(playerName),
+            target = leader,
+            message = language.translateString("tips.teamReceiveApplication", playerName)
+        ))
     }
 
     override fun addPlayer(playerName: String) {
@@ -49,7 +53,11 @@ class Team(private val dao: Dao) : Dao by dao {
             return
         }
         // 告诉其他服务器里面的这个玩家
-        serverChannel?.writeAndFlush(Packet.Message(target = playerName, message = language.translateString("tip.joined")))
+        serverChannel?.writeAndFlush(Packet.Message(
+            dest = getMemberLoginAt(playerName),
+            target = playerName,
+            message = language.translateString("tip.joined")
+        ))
     }
 
     override fun disband() {
@@ -59,7 +67,11 @@ class Team(private val dao: Dao) : Dao by dao {
             if (player != null && player.isOnline) { // 检查是否是本服玩家
                 player.sendMessage(language.translateString("tips.teamDisbanded"))
             } else {
-                serverChannel?.writeAndFlush(Packet.Message(target = playerName, message = language.translateString("tips.teamDisbanded")))
+                serverChannel?.writeAndFlush(Packet.Message(
+                    dest = getMemberLoginAt(playerName),
+                    target = playerName,
+                    message = language.translateString("tips.teamDisbanded")
+                ))
             }
         }
     }

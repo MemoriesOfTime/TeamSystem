@@ -1,6 +1,7 @@
 package cn.lanink.teamsystem.distribute.server
 
-import cn.lanink.teamsystem.TeamSystem
+import cn.lanink.teamsystem.TeamSystem.Companion.language
+import cn.lanink.teamsystem.TeamSystem.Companion.logger
 import cn.lanink.teamsystem.distribute.pack.Pack
 import cn.lanink.teamsystem.distribute.pack.Packet
 import io.netty.bootstrap.ServerBootstrap
@@ -43,12 +44,19 @@ fun startServer(port: Int): Pair<EventLoopGroup, EventLoopGroup> {
         @Throws(Exception::class)
         override fun operationComplete(channelFuture: ChannelFuture) {
             if (channelFuture.isSuccess) {
-                TeamSystem.logger.info("Server: 群组服在端口 $port 上已经开启")
+                logger.info(language.translateString("info.serverStarted", port))
             } else {
-                TeamSystem.logger.info("Server: 群组服开启失败")
+                logger.warning(language.translateString("info.serverStartedFail"))
             }
         }
     })
+    future.channel().closeFuture().addListener {
+        if (it.isSuccess) {
+            logger.info(language.translateString("info.serverStop"))
+        } else {
+            logger.warning(language.translateString("info.serverStopFail"))
+        }
+    }
     return Pair<EventLoopGroup, EventLoopGroup>(boss, worker)
 }
 
@@ -102,11 +110,12 @@ object HeartBeatHandler : SimpleChannelInboundHandler<Packet.HeartBeatPacket>(){
     }
 }
 
+@ChannelHandler.Sharable
 object ResponseHandler: SimpleChannelInboundHandler<Packet>() {
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Packet) {
         val handler: SimpleChannelInboundHandler<out Packet>? = Handler.handlerMap[msg.packID]
-        handler ?: TeamSystem.logger.warning("Server: 未找到对应数据包的 Handler") //TODO translate
+        handler ?: logger.warning(language.translateString("info.packNotFound", msg.packID)) //TODO translate
         handler?.channelRead(ctx, msg)
     }
 
@@ -115,7 +124,7 @@ object ResponseHandler: SimpleChannelInboundHandler<Packet>() {
         val socket = ctx.channel().remoteAddress() as InetSocketAddress
         val clientIP = socket.address.hostAddress
         val clientPort = socket.port
-        TeamSystem.logger.warning("Server: 子服务器掉线: $clientIP : $clientPort")
+        logger.warning(language.translateString("info.clientDisconnect", clientIP, clientPort))
         super.channelInactive(ctx)
     }
 }

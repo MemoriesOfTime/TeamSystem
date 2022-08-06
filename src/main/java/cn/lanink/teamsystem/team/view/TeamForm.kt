@@ -3,6 +3,8 @@ package cn.lanink.teamsystem.team.view
 import cn.lanink.formdsl.dsl.*
 import cn.lanink.teamsystem.TeamSystem
 import cn.lanink.teamsystem.TeamSystem.Companion.language
+import cn.lanink.teamsystem.TeamSystem.Companion.serverChannel
+import cn.lanink.teamsystem.distribute.pack.Packet
 import cn.lanink.teamsystem.team.Team
 import cn.nukkit.Player
 import cn.nukkit.Server
@@ -20,7 +22,7 @@ class TeamForm(private val team: Team) : View {
                 ${language.translateString("general.teamName")}: ${team.name}
                 ${language.translateString("general.teamSize")}: $maxSize
                 ${language.translateString("general.leader")}: ${
-                if (team.isOnline(leaderName)) {
+                if (team.isMemberOnline(leaderName)) {
                     language.translateString("general.teamPlayerNameOnline", leaderName)
                 } else {
                     language.translateString("general.teamPlayerNameOffline", leaderName)
@@ -35,7 +37,7 @@ class TeamForm(private val team: Team) : View {
                 if (members.size > 1) members.filterNot {
                     it == leaderName
                 }.map {
-                    if (team.isOnline(it)) {
+                    if (team.isMemberOnline(it)) {
                         language.translateString("general.teamPlayerNameOnline", it)
                     } else {
                         language.translateString("general.teamPlayerNameOffline", it)
@@ -210,7 +212,7 @@ class TeamForm(private val team: Team) : View {
                     onPlayerClick {
                         sendMessage(language.translateString("tips.sendTeleportRequest"))
                         val receiver: Player? = Server.getInstance().getPlayer(it)
-                        if (receiver?.isOnline == true) {
+                        if (receiver?.isOnline == true) {  // 传送对象就在本服
                             FormModal {
                                 target = receiver
                                 title = language.translateString("form.teleport.handle.title")
@@ -229,7 +231,11 @@ class TeamForm(private val team: Team) : View {
                             }
                             return@onPlayerClick
                         }
-                        // TODO 广播 + 跨服传送
+                        serverChannel?.writeAndFlush(Packet.TeleportRequestPacket(
+                            dest = team.getMemberLoginAt(it),
+                            sender = player.name,
+                            target = it
+                        ))
                     }
                 }
             }

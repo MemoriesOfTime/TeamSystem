@@ -1,9 +1,11 @@
+@file:Suppress("UNUSED")
 package cn.lanink.teamsystem
 
 import cn.lanink.teamsystem.db.mysql.OnlinePlayer
 import cn.lanink.teamsystem.db.mysql.OnlinePlayers
 import cn.lanink.teamsystem.db.mysql.onlinePlayers
 import cn.lanink.teamsystem.team.dao.TeamRedisDao
+import cn.nukkit.Player
 import cn.nukkit.Server
 import cn.nukkit.event.EventHandler
 import cn.nukkit.event.Listener
@@ -21,9 +23,14 @@ import java.time.LocalDateTime
  */
 class EventListener : Listener {
 
+    companion object {
+        val transferTeleportQueue: HashMap<String, Player> = HashMap()  // senderName -> targetPos
+    }
+
     @EventHandler
-    fun onPlayerJoin(event: PlayerJoinEvent?) {
-        val playerName = event!!.player.name
+    fun onPlayerJoin(event: PlayerJoinEvent) {
+        val playerName = event.player.name
+        val player = event.player
         TeamSystem.mysqlDb?.onlinePlayers?.apply {
             val found = find { it.playerName eq playerName }
             if (found == null) {
@@ -31,6 +38,7 @@ class EventListener : Listener {
                     name = playerName
                     ofOnlineTeam = null
                     quitAt = null
+                    loginAt = TeamSystem.identity
                 })
             } else {
                 TeamSystem.mysqlDb!!.update(OnlinePlayers) {
@@ -42,13 +50,26 @@ class EventListener : Listener {
             }
         }
         TeamSystem.redisDb?.resource?.use {
+            it.set("${TeamRedisDao.loginRootKey}$playerName", TeamSystem.identity)
             it.del("${TeamRedisDao.quitRootKey}$playerName")
+        }
+        if (transferTeleportQueue.contains(playerName)) {
+            Server.getInstance().scheduler.scheduleDelayedTask(TeamSystem.instance, {
+                transferTeleportQueue[playerName] ?: run {
+                    transferTeleportQueue.remove(playerName)
+                    return@scheduleDelayedTask
+                }
+                if (transferTeleportQueue[playerName]?.isOnline == true) {
+                    player?.teleport(transferTeleportQueue[playerName])
+                }
+                transferTeleportQueue.remove(playerName)
+            }, 40)  // 延迟 2 s
         }
     }
 
     @EventHandler
-    fun onPlayerQuit(event: PlayerQuitEvent?) {
-        val name = event!!.player.name
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        val name = event.player.name
         TeamSystem.mysqlDb?.apply {
             Server.getInstance().scheduler.scheduleDelayedTask(TeamSystem.instance, {
                 this.onlinePlayers.find {

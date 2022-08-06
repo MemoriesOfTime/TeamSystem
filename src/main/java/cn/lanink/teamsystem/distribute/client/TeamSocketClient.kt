@@ -1,5 +1,6 @@
 package cn.lanink.teamsystem.distribute.client
 
+import cn.lanink.teamsystem.TeamSystem.Companion.language
 import cn.lanink.teamsystem.TeamSystem.Companion.logger
 import cn.lanink.teamsystem.distribute.pack.Pack
 import cn.lanink.teamsystem.distribute.pack.Packet
@@ -12,7 +13,6 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
-import java.net.InetSocketAddress
 
 fun startClient(identity: String, host: String, port: Int): Pair<Channel, EventLoopGroup> {
     val worker = NioEventLoopGroup()
@@ -32,17 +32,17 @@ fun startClient(identity: String, host: String, port: Int): Pair<Channel, EventL
         @Throws(Exception::class)
         override fun operationComplete(channelFuture: ChannelFuture) {
             if (channelFuture.isSuccess) {
-                logger.info("Client: 已经连接群组服")
+                logger.info(language.translateString("info.connectToDistribute"))
             } else {
-                logger.warning("Client: 连接群组服失败")
+                logger.warning(language.translateString("info.connectToDistributeFail"))
             }
         }
     })
     future.channel().closeFuture().addListener {
         if (it.isSuccess)
-            logger.info("Client: 已从群组服中断开连接")
+            logger.info(language.translateString("info.inactiveFromDistribute"))
         else
-            logger.warning("Client: 连接已经不可用，但未从群组服中断开连接")
+            logger.warning(language.translateString("info.connectionBreakdown"))
     }
     return Pair<Channel, EventLoopGroup>(future.channel(), worker)
 }
@@ -74,16 +74,13 @@ object InboundResponseHandler : SimpleChannelInboundHandler<Packet>() {
     override fun channelRead0(ctx: ChannelHandlerContext, pack: Packet) {
         if (pack.packID == Pack.ID_HEARTBEAT) return  // 忽略心跳包
         val handler: SimpleChannelInboundHandler<out Packet>? = Handler.handlerMap[pack.packID]
-        handler ?: logger.warning("Client: 未找到对应数据包的 Handler") //TODO translate
+        handler ?: logger.warning(language.translateString("info.packNotFound", pack.packID)) //TODO translate
         handler?.channelRead(ctx, pack)
     }
 
     @Throws(Exception::class)
     override fun channelInactive(ctx: ChannelHandlerContext) {
-        val socket = ctx.channel().remoteAddress() as InetSocketAddress
-        val ip = socket.address.hostAddress
-        val port = socket.port
-        logger.warning("Client: 群组服master节点断开: $ip : $port")
+        logger.warning(language.translateString("info.inactiveFromDistribute"))
         super.channelInactive(ctx)
     }
 }

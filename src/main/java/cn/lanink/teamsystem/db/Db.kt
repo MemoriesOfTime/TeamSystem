@@ -42,6 +42,7 @@ object Db {
                         primary key,
                     player_name varchar(512) default '' not null,
                     of_team     int                     null,
+                    login_at    varchar(512) default '' not null,
                     quit_at     datetime                null,
                     constraint t_online_players_player_name_uindex
                         unique (player_name)

@@ -10,11 +10,12 @@ class TeamRedisDao(
 ) : TeamDao(id, name, maxPlayers, leader) {
 
     private val database = TeamSystem.redisDb!!
-    private val key: String = "team_sys:$id"
-    private val playersKey: String = "$key:players"
-    private val appliesKey: String = "$key:applies"
+    private val key: String = "team_sys:$id"         // Hash
+    private val playersKey: String = "$key:players"  // Set
+    private val appliesKey: String = "$key:applies"  // Set
     companion object {
         val quitRootKey: String = "team_sys:players:quit:"
+        val loginRootKey: String = "team_sys:players:login:"
     }
 
     override var leaderName: String = leader
@@ -88,12 +89,18 @@ class TeamRedisDao(
         }
     }
 
-    override fun isOnline(playerName: String): Boolean {
-        if (super.isOnline(playerName)) {
+    override fun isMemberOnline(playerName: String): Boolean {
+        if (super.isMemberOnline(playerName)) {
             return true
         }
         return database.resource.use {
             !it.exists("$quitRootKey$playerName")
+        }
+    }
+
+    override fun getMemberLoginAt(playerName: String): String {
+        return database.resource.use {
+            it.get(loginRootKey+playerName)
         }
     }
 

@@ -30,7 +30,7 @@ import redis.clients.jedis.JedisPool
 class TeamSystem : PluginBase() {
 
     companion object {
-        const val VERSION = "1.0.0-SNAPSHOT git-7061e56"
+        const val VERSION = "1.0.0-SNAPSHOT git-259d55e"
         var debug = false
 
         lateinit var instance: TeamSystem
@@ -150,6 +150,17 @@ class TeamSystem : PluginBase() {
         if (mysqlEnabled && redisEnabled) {
             logger.error(language.translateString("info.databaseConflict"))
             server.pluginManager.disablePlugin(this)
+            return
+        }
+        if (distributionEnabled && !mysqlEnabled && !redisEnabled) {
+            logger.error(language.translateString("info.distributeConfigWrong1"))
+            server.pluginManager.disablePlugin(this)
+            return
+        }
+        if ((mysqlEnabled xor redisEnabled) && !distributionEnabled) {
+            logger.error(language.translateString("info.distributeConfigWrong2"))
+            server.pluginManager.disablePlugin(this)
+            return
         }
         logger.info(language.translateString("info.connectingToDatabase"))
         try {
@@ -202,6 +213,11 @@ class TeamSystem : PluginBase() {
             val host = distributeConfig["host"] as String
             val port = distributeConfig["port"] as Int
             identity = distributeConfig["id"] as String
+            if (identity == "") {
+                logger.error(language.translateString("info.distributeConfigWrong3"))
+                server.pluginManager.disablePlugin(this)
+                return
+            }
             if (distributeConfig["type"] == "master") {
                 serverLoops = startServer(port)
                 val out = startClient(identity, host, port)
@@ -212,7 +228,7 @@ class TeamSystem : PluginBase() {
                 serverChannel = out.first
                 clientLoop = out.second
             } else {
-                logger.warning("Distribute:type 配置错误")
+                logger.warning(language.translateString("info.distributeConfigWrong4"))
             }
         }
         server.pluginManager.registerEvents(EventListener(), this)
@@ -222,14 +238,8 @@ class TeamSystem : PluginBase() {
     override fun onDisable() {
         clientLoop?.shutdownGracefully()?.sync()
         serverLoops?.apply {
-            first.shutdownGracefully().sync().addListener {
-                if (!it.isSuccess)
-                    logger.warning("未能正常关闭群组主服服务1")
-            }
-            second.shutdownGracefully().sync().addListener {
-                if (!it.isSuccess)
-                    logger.warning("未能正常关闭群组主服服务2")
-            }
+            first.shutdownGracefully().sync()
+            second.shutdownGracefully().sync()
         }
     }
 

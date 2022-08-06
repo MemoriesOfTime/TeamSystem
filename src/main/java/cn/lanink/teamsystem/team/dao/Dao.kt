@@ -31,7 +31,9 @@ interface Dao {
     fun cancelApplyFrom(player: Player)
     fun cancelApplyFrom(playerName: String)
 
-    fun isOnline(playerName: String): Boolean
+    fun isMemberOnline(playerName: String): Boolean
+
+    fun getMemberLoginAt(playerName: String): String
 
     fun disband()
 

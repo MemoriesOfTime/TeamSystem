@@ -8,6 +8,7 @@ interface OnlinePlayer : Entity<OnlinePlayer> {
     val id: Int
     var name: String
     var ofOnlineTeam: OnlineTeam?
+    var loginAt: String
     var quitAt: LocalDateTime?
 }
 

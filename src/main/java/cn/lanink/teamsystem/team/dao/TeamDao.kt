@@ -1,5 +1,6 @@
 package cn.lanink.teamsystem.team.dao
 
+import cn.lanink.teamsystem.TeamSystem
 import cn.nukkit.Player
 import cn.nukkit.Server
 
@@ -65,7 +66,7 @@ abstract class TeamDao(
         applicationList.remove(playerName)
     }
 
-    override fun isOnline(playerName: String): Boolean {
+    override fun isMemberOnline(playerName: String): Boolean {
         return (Server.getInstance().getPlayer(playerName)?.isOnline == true)
     }
 
@@ -80,4 +81,8 @@ class TeamLocalDao(
     override val name: String,
     override val maxPlayers: Int,
     leader: String
-) : TeamDao(id, name, maxPlayers, leader)
+) : TeamDao(id, name, maxPlayers, leader) {
+    override fun getMemberLoginAt(playerName: String): String {
+        return TeamSystem.identity
+    }
+}

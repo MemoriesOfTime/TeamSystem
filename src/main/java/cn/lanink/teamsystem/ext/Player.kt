@@ -1,10 +1,8 @@
-package cn.lanink.teamsystem.utils
+package cn.lanink.teamsystem.ext
 
 import cn.lanink.teamsystem.TeamSystem
 import cn.lanink.teamsystem.team.Team
 import cn.lanink.teamsystem.team.TeamManager
-import cn.lanink.teamsystem.team.dao.TeamDao
-import cn.lanink.teamsystem.team.dao.TeamMySQLDao
 import cn.nukkit.Player
 
 // 一些增强的方法，为 kt 开发准备
@@ -35,4 +33,8 @@ fun Player.getTeam(): Team? {
         }
     }
     return null
+}
+
+fun Player.loginAt(): String {
+    return TeamSystem.identity
 }

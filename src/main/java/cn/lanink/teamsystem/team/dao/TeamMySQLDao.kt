@@ -115,13 +115,19 @@ class TeamMySQLDao(
         }
     }
 
-    override fun isOnline(playerName: String): Boolean {
-        if (super.isOnline(playerName)) {
+    override fun isMemberOnline(playerName: String): Boolean {
+        if (super.isMemberOnline(playerName)) {
             return true
         }
         return database.onlinePlayers.find {
             it.playerName eq playerName
         }?.quitAt == null
+    }
+
+    override fun getMemberLoginAt(playerName: String): String {
+        return database.onlinePlayers.find {
+            it.playerName eq playerName
+        }?.loginAt !!
     }
 
     override fun disband() {
