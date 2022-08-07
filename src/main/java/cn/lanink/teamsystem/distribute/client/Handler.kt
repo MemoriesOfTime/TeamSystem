@@ -7,8 +7,10 @@ import cn.lanink.teamsystem.distribute.pack.Pack
 import cn.lanink.teamsystem.distribute.pack.Packet
 import cn.nukkit.Player
 import cn.nukkit.Server
+import cn.nukkit.network.protocol.TransferPacket
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
 
@@ -74,7 +76,17 @@ object Handler {
                 }
                 if (mess.ok) {
                     // 跨服
-                    player.transfer(InetSocketAddress(mess.ip, mess.port))
+                    val addr: InetAddress? = InetSocketAddress(mess.ip, mess.port).address
+                    val host = if (addr == null) {
+                        mess.ip  // 兼容水狗服
+                    } else {
+                        addr.hostAddress
+                    }
+                    TransferPacket().apply {
+                        address = host
+                        port = mess.port
+                        player.dataPacket(this)
+                    }
                 } else {
                     player.sendMessage(TeamSystem.language.translateString("form.teleport.refused"))
                 }
