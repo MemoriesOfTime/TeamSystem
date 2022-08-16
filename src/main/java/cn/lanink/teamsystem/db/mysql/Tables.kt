@@ -1,4 +1,4 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db.mysql
 
 import org.ktorm.database.Database
 import org.ktorm.entity.sequenceOf
@@ -22,6 +22,7 @@ object OnlinePlayers : Table<OnlinePlayer>("t_online_players") {
     val id = int("id").primaryKey().bindTo { it.id }
     val playerName = varchar("player_name").bindTo { it.name }
     val ofTeam = int("of_team").references(Teams) { it.ofOnlineTeam }
+    val loginAt = varchar("login_at").bindTo { it.loginAt }
     val quitAt = datetime("quit_at").bindTo { it.quitAt }
 }
 

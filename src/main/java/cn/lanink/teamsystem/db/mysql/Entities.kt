@@ -1,4 +1,4 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db.mysql
 
 import org.ktorm.entity.Entity
 import java.time.LocalDateTime
@@ -8,6 +8,7 @@ interface OnlinePlayer : Entity<OnlinePlayer> {
     val id: Int
     var name: String
     var ofOnlineTeam: OnlineTeam?
+    var loginAt: String
     var quitAt: LocalDateTime?
 }
 

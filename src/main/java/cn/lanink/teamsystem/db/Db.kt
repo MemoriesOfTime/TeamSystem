@@ -1,18 +1,18 @@
-package cn.lanink.teamsystem.dao
+package cn.lanink.teamsystem.db
 
-import cn.lanink.teamsystem.SystemProvider as SP
+import cn.lanink.teamsystem.TeamSystem
 import org.ktorm.database.Database
 import org.ktorm.database.asIterable
 
-object Dao {
+object Db {
 
-    fun connect(host: String, port: Int, database: String, user: String, password: String): Database {
+    fun connectMysql(host: String, port: Int, database: String, user: String, password: String): Database {
         return Database.connect("jdbc:mysql://$host:$port/$database", user = user, password = password)
     }
 
     fun checkInit() : Boolean {
         val set = setOf("t_team_system", "t_online_players", "t_applies")
-        return set.size == SP.Database?.useConnection { conn ->
+        return set.size == TeamSystem.mysqlDb?.useConnection { conn ->
             conn.prepareStatement("SHOW TABLES;").use { stmt ->
                 stmt.executeQuery().asIterable().map {
                     it.getString(1)
@@ -42,6 +42,7 @@ object Dao {
                         primary key,
                     player_name varchar(512) default '' not null,
                     of_team     int                     null,
+                    login_at    varchar(512) default '' not null,
                     quit_at     datetime                null,
                     constraint t_online_players_player_name_uindex
                         unique (player_name)
@@ -69,7 +70,7 @@ object Dao {
                         foreign key (team_leader) references t_online_players (player_name);
             """.trimIndent()
 
-        SP.Database?.useConnection { conn ->
+        TeamSystem.mysqlDb?.useConnection { conn ->
             if (conn.createStatement().apply {
                     initSQL.split(";").filterNot {
                         it.trimIndent() == ""
@@ -77,7 +78,7 @@ object Dao {
                         this.addBatch(it)
                     }
                 }.executeBatch().isNotEmpty()) {
-                SP.Logger.info(SP.Language.translateString("info.initDatabaseSuccess"))
+                TeamSystem.logger.info(TeamSystem.language.translateString("info.initDatabaseSuccess"))
             }
         }
     }
